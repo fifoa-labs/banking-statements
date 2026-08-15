@@ -18,6 +18,7 @@ from banking_statements.processors.chase.signatures import (
     CHASE_CHECKING_SIGNATURES,
 )
 
+from .activity import parse_activity_rows, parse_activity_transactions
 from .identity import parse_identity
 from .summary import parse_balance_summary
 
@@ -58,12 +59,24 @@ class ChaseCheckingProcessor:
         """Parse a Chase checking statement."""
         identity = parse_identity(text)
 
-        _period = StatementPeriod(
+        period = StatementPeriod(
             start=identity.statement_start,
             end=identity.statement_end,
         )
 
-        _balances = parse_balance_summary(text)
+        activity_rows = parse_activity_rows(text)
+        balances = parse_balance_summary(text)
+        transactions = parse_activity_transactions(
+            activity_rows,
+            period=period,
+        )
 
-        msg = "Chase checking transaction parsing is not implemented yet."
-        raise NotImplementedError(msg)
+        return ParsedStatement(
+            source=source,
+            institution="chase",
+            account=identity.account,
+            processor=self.name,
+            period=period,
+            balances=balances,
+            transactions=transactions,
+        )

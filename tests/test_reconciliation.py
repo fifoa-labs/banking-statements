@@ -28,6 +28,7 @@ def make_statement(
     opening_balance: str,
     closing_balance: str,
     transactions: tuple[TransactionEvent, ...] = (),
+    account_type: AccountType = AccountType.CREDIT_CARD,
 ) -> ParsedStatement:
     """Build a parsed statement for reconciliation tests."""
     return ParsedStatement(
@@ -37,8 +38,8 @@ def make_statement(
         ),
         institution="sample-bank",
         account=AccountIdentity(
-            account_type=AccountType.CREDIT_CARD,
-            display_number="XXXX XXXX XXXX 1234",
+            account_type=account_type,
+            display_number="000000000001234",
             last4="1234",
         ),
         processor="sample.credit_card",
@@ -146,5 +147,35 @@ def test_reconcile_statement_handles_no_transactions() -> None:
     assert result.transaction_debits == Decimal("0")
     assert result.transaction_credits == Decimal("0")
     assert result.expected_closing_balance == Decimal("-95.90")
+    assert result.difference == Decimal("0.00")
+    assert result.reconciled is True
+
+
+def test_reconcile_checking_statement_uses_account_balance_direction() -> None:
+    statement = make_statement(
+        opening_balance="1000.00",
+        closing_balance="1150.00",
+        account_type=AccountType.CHECKING,
+        transactions=(
+            TransactionEvent(
+                date=date(2026, 1, 5),
+                amount=Decimal("200.00"),
+                direction=TransactionDirection.CREDIT,
+                description="SAMPLE DEPOSIT",
+            ),
+            TransactionEvent(
+                date=date(2026, 1, 10),
+                amount=Decimal("50.00"),
+                direction=TransactionDirection.DEBIT,
+                description="SAMPLE PAYMENT",
+            ),
+        ),
+    )
+
+    result = reconcile_statement(statement)
+
+    assert result.transaction_debits == Decimal("50.00")
+    assert result.transaction_credits == Decimal("200.00")
+    assert result.expected_closing_balance == Decimal("1150.00")
     assert result.difference == Decimal("0.00")
     assert result.reconciled is True
