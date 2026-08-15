@@ -31,6 +31,7 @@ class ActivitySection(StrEnum):
 
     PAYMENTS_AND_OTHER_CREDITS = "payments_and_other_credits"
     PURCHASE = "purchase"
+    BALANCE_TRANSFERS = "balance_transfers"
     FEES_CHARGED = "fees_charged"
     INTEREST_CHARGED = "interest_charged"
 
@@ -56,6 +57,8 @@ _YEAR_TO_DATE_PATTERN = re.compile(
 _SECTION_MARKERS = {
     "PAYMENTS AND OTHER CREDITS": ActivitySection.PAYMENTS_AND_OTHER_CREDITS,
     "PURCHASE": ActivitySection.PURCHASE,
+    "BALANCE TRANSFERS": ActivitySection.BALANCE_TRANSFERS,
+    "BALANCE TRANSFERS / MY CHASE LOAN": ActivitySection.BALANCE_TRANSFERS,
     "FEES CHARGED": ActivitySection.FEES_CHARGED,
     "INTEREST CHARGED": ActivitySection.INTEREST_CHARGED,
 }

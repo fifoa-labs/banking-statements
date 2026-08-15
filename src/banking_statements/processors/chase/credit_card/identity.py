@@ -29,11 +29,20 @@ class ChaseCreditCardIdentity:
 
 _ACCOUNT_PATTERN = re.compile(
     r"Account [Nn]umber:\s+"
-    r"(?P<display>XXXX XXXX XXXX (?P<last4>\d{4}))",
+    r"(?P<display>"
+    r"(?:XXXX XXXX XXXX|\d{4} \d{4} \d{4}) "
+    r"(?P<last4>\d{4})"
+    r")",
+)
+
+_UNLABELED_ACCOUNT_PATTERN = re.compile(
+    r"\b(?P<display>"
+    r"\d{4} \d{4} \d{4} (?P<last4>\d{4})"
+    r")\b",
 )
 
 _PERIOD_PATTERN = re.compile(
-    r"Opening/Closing Date\s+"
+    r"O`?pening/Closing Date\s+"
     r"(?P<start>\d{2}/\d{2}/\d{2})\s*-\s*"
     r"(?P<end>\d{2}/\d{2}/\d{2})",
 )
@@ -53,9 +62,21 @@ def parse_identity(text: StatementText) -> ChaseCreditCardIdentity:
     full_text = text.text
 
     account_match = _ACCOUNT_PATTERN.search(full_text)
+
     if account_match is None:
-        msg = "Chase credit-card account number was not found."
-        raise ValueError(msg)
+        fallback_matches = tuple(
+            _UNLABELED_ACCOUNT_PATTERN.finditer(full_text)
+        )
+
+        unique_accounts = {
+            match.group("display"): match for match in fallback_matches
+        }
+
+        if len(unique_accounts) != 1:
+            msg = "Chase credit-card account number was not found uniquely."
+            raise ValueError(msg)
+
+        account_match = next(iter(unique_accounts.values()))
 
     period_match = _PERIOD_PATTERN.search(full_text)
     if period_match is None:

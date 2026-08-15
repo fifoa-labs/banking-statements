@@ -43,8 +43,27 @@ def test_processor_matches_supported_structure() -> None:
         "\n".join(  # noqa: FLY002
             (
                 "www.chase.com/cardhelp",
-                "Account Number: XXXX XXXX XXXX 1234",
-                "Opening/Closing Date 01/01/26 - 01/31/26",
+                "Opening/Closing Date 02/01/26 - 02/28/26",
+            )
+        )
+    )
+
+    match = processor.match(text)
+
+    assert match.matched is True
+    assert match.confidence == 100
+    assert match.reason == "Matched Chase credit-card statement structure."
+
+
+def test_processor_matches_historical_structure() -> None:
+    processor = ChaseCreditCardProcessor()
+
+    text = make_statement_text(
+        "\n".join(  # noqa: FLY002
+            (
+                "Credit Card Statement",
+                "www.chase.com",
+                "Opening/Closing Date 11/15/18 - 12/14/18",
             )
         )
     )
@@ -82,13 +101,13 @@ def test_processor_parses_statement_identity() -> None:
         "\n".join(  # noqa: FLY002
             (
                 "www.chase.com/cardhelp",
-                "Account Number: XXXX XXXX XXXX 9062",
+                "Account Number: XXXX XXXX XXXX 1234",
                 "Previous Balance $0.00",
                 "New Balance $0.00",
-                "Opening/Closing Date 03/12/26 - 04/11/26",
+                "Opening/Closing Date 03/10/26 - 04/09/26",
                 "Date of",
                 "Transaction Merchant Name or Transaction Description $ Amount",  # noqa: E501
-                "Statement Date: 04/11/26",
+                "Statement Date: 04/09/26",
             )
         )
     )
@@ -102,10 +121,10 @@ def test_processor_parses_statement_identity() -> None:
     assert statement.institution == "chase"
     assert statement.processor == "chase.credit_card.v1"
     assert statement.account.account_type.value == "credit_card"
-    assert statement.account.display_number == "XXXX XXXX XXXX 9062"
-    assert statement.account.last4 == "9062"
-    assert statement.period.start == date(2026, 3, 12)
-    assert statement.period.end == date(2026, 4, 11)
+    assert statement.account.display_number == "XXXX XXXX XXXX 1234"
+    assert statement.account.last4 == "1234"
+    assert statement.period.start == date(2026, 3, 10)
+    assert statement.period.end == date(2026, 4, 9)
     assert statement.balances.opening_balance == Decimal("0.00")
     assert statement.balances.closing_balance == Decimal("0.00")
     assert statement.transactions == ()
@@ -123,15 +142,15 @@ def test_processor_parses_statement_identity_and_transactions() -> None:
         "\n".join(  # noqa: FLY002
             (
                 "www.chase.com/cardhelp",
-                "Account Number: XXXX XXXX XXXX 9062",
+                "Account Number: XXXX XXXX XXXX 1234",
                 "Previous Balance $0.00",
-                "New Balance $8.25",
-                "Opening/Closing Date 03/12/26 - 04/11/26",
+                "New Balance $18.45",
+                "Opening/Closing Date 03/10/26 - 04/09/26",
                 "Date of",
                 "Transaction Merchant Name or Transaction Description $ Amount",  # noqa: E501
-                "Statement Date: 04/11/26",
+                "Statement Date: 04/09/26",
                 "PURCHASE",
-                "03/30 SAMPLE MERCHANT 8.25",
+                "03/30 SAMPLE MERCHANT 18.45",
                 "2026 Totals Year-to-Date",
             )
         )
@@ -146,32 +165,53 @@ def test_processor_parses_statement_identity_and_transactions() -> None:
     assert statement.institution == "chase"
     assert statement.processor == "chase.credit_card.v1"
     assert statement.account.account_type.value == "credit_card"
-    assert statement.account.display_number == "XXXX XXXX XXXX 9062"
-    assert statement.account.last4 == "9062"
-    assert statement.period.start == date(2026, 3, 12)
-    assert statement.period.end == date(2026, 4, 11)
+    assert statement.account.display_number == "XXXX XXXX XXXX 1234"
+    assert statement.account.last4 == "1234"
+    assert statement.period.start == date(2026, 3, 10)
+    assert statement.period.end == date(2026, 4, 9)
     assert statement.balances.opening_balance == Decimal("0.00")
-    assert statement.balances.closing_balance == Decimal("8.25")
+    assert statement.balances.closing_balance == Decimal("18.45")
 
     assert len(statement.transactions) == 1
 
     transaction = statement.transactions[0]
 
     assert transaction.date == date(2026, 3, 30)
-    assert transaction.amount == Decimal("8.25")
+    assert transaction.amount == Decimal("18.45")
     assert transaction.direction is TransactionDirection.DEBIT
     assert transaction.description == "SAMPLE MERCHANT"
 
 
-def test_processor_matches_lowercase_account_number_marker() -> None:
+def test_processor_matches_when_account_number_text_is_mangled() -> None:
     processor = ChaseCreditCardProcessor()
 
     text = make_statement_text(
         "\n".join(  # noqa: FLY002
             (
                 "www.chase.com/cardhelp",
-                "Account number: XXXX XXXX XXXX 7001",
-                "Opening/Closing Date 12/10/24 - 01/09/25",
+                (
+                    "A A A c CC cou CC nt OO Nu UU m NN ber TT : "
+                    "1111 2222 3333 4444"
+                ),
+                "Opening/Closing Date 08/05/22 - 09/04/22",
+            )
+        )
+    )
+
+    match = processor.match(text)
+
+    assert match.matched is True
+    assert match.confidence == 100
+
+
+def test_processor_matches_mangled_opening_closing_marker() -> None:
+    processor = ChaseCreditCardProcessor()
+
+    text = make_statement_text(
+        "\n".join(  # noqa: FLY002
+            (
+                "www.chase.com/cardhelp",
+                "O`pening/Closing Date 12/08/20 - 01/07/21",
             )
         )
     )

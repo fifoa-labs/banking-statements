@@ -31,7 +31,7 @@ def _resolve_transaction_date(
     date_text: str,
     period: StatementPeriod,
 ) -> date:
-    """Resolve a Chase month/day value using the statement period."""
+    """Resolve a Chase month/day value relative to statement closing date."""
     match = _DATE_PATTERN.match(date_text)
 
     if match is None:
@@ -41,55 +41,28 @@ def _resolve_transaction_date(
     month = int(match.group("month"))
     day = int(match.group("day"))
 
-    candidates: list[date] = []
-
-    for year in range(
-        period.start.year,
-        period.end.year + 1,
-    ):
-        try:
-            candidates.append(
-                date(
-                    year,
-                    month,
-                    day,
-                )
-            )
-        except ValueError:
-            continue
-
-    if not candidates:
-        msg = f"Invalid Chase transaction calendar date: {date_text!r}."
-        raise ValueError(msg)
-
-    def distance_from_period(candidate: date) -> int:
-        if candidate < period.start:
-            return (period.start - candidate).days
-
-        if candidate > period.end:
-            return (candidate - period.end).days
-
-        return 0
-
-    minimum_distance = min(
-        distance_from_period(candidate) for candidate in candidates
-    )
-
-    nearest = tuple(
-        candidate
-        for candidate in candidates
-        if distance_from_period(candidate) == minimum_distance
-    )
-
-    if len(nearest) > 1:
-        msg = (
-            f"Transaction date {date_text!r} is ambiguous for "
-            f"statement period {period.start.isoformat()}.."
-            f"{period.end.isoformat()}."
+    try:
+        candidate = date(
+            period.end.year,
+            month,
+            day,
         )
-        raise ValueError(msg)
+    except ValueError as exc:
+        msg = f"Invalid Chase transaction calendar date: {date_text!r}."
+        raise ValueError(msg) from exc
 
-    return nearest[0]
+    if candidate <= period.end:
+        return candidate
+
+    try:
+        return date(
+            period.end.year - 1,
+            month,
+            day,
+        )
+    except ValueError as exc:
+        msg = f"Invalid Chase transaction calendar date: {date_text!r}."
+        raise ValueError(msg) from exc
 
 
 def _transaction_direction(

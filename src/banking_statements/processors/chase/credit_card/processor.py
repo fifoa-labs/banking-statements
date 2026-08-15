@@ -14,6 +14,9 @@ from banking_statements.domain import (
     StatementSource,
 )
 from banking_statements.processors.base import ProcessorMatch
+from banking_statements.processors.chase.signatures import (
+    CHASE_CREDIT_CARD_SIGNATURES,
+)
 
 from .activity import (
     parse_activity_rows,
@@ -36,18 +39,9 @@ class ChaseCreditCardProcessor:
 
     def match(self, text: StatementText) -> ProcessorMatch:
         """Determine whether the statement matches this processor."""
-        markers = (
-            "www.chase.com/cardhelp",
-            "Opening/Closing Date",
-        )
-
-        account_markers = (
-            "Account Number:",
-            "Account number:",
-        )
-
-        matched = all(marker in text.text for marker in markers) and any(
-            marker in text.text for marker in account_markers
+        matched = any(
+            all(marker in text.text for marker in signature.required_markers)
+            for signature in CHASE_CREDIT_CARD_SIGNATURES
         )
 
         return ProcessorMatch(

@@ -24,7 +24,7 @@ _SUMMARY_PATTERNS = {
         re.MULTILINE,
     ),
     "closing_balance": re.compile(
-        r"^[ \t]*New Balance[ \t]+"
+        r"^[ \t]*N`?ew Balance[ \t]+"
         r"(?P<amount>[+-]?\$?[\d,]+\.\d{2})(?=[ \t]|$)",
         re.MULTILINE,
     ),

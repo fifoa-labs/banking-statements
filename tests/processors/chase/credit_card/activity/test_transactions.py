@@ -30,8 +30,8 @@ def test_parse_purchase_transaction() -> None:
             ActivityRow(
                 section=ActivitySection.PURCHASE,
                 date_text="03/30",
-                description="RVT*Katy ISD 281-3966000 TX",
-                amount_text="8.25",
+                description="EXAMPLE MARKETPLACE",
+                amount_text="18.45",
             ),
         ),
         period=StatementPeriod(
@@ -45,9 +45,9 @@ def test_parse_purchase_transaction() -> None:
     transaction = transactions[0]
 
     assert transaction.date == date(2026, 3, 30)
-    assert transaction.amount == Decimal("8.25")
+    assert transaction.amount == Decimal("18.45")
     assert transaction.direction is TransactionDirection.DEBIT
-    assert transaction.description == "RVT*Katy ISD 281-3966000 TX"
+    assert transaction.description == "EXAMPLE MARKETPLACE"
 
 
 def test_parse_fee_transaction() -> None:
@@ -57,7 +57,7 @@ def test_parse_fee_transaction() -> None:
                 section=ActivitySection.FEES_CHARGED,
                 date_text="07/01",
                 description="ANNUAL MEMBERSHIP FEE",
-                amount_text="95.00",
+                amount_text="75.00",
             ),
         ),
         period=StatementPeriod(
@@ -69,7 +69,7 @@ def test_parse_fee_transaction() -> None:
     transaction = transactions[0]
 
     assert transaction.date == date(2026, 7, 1)
-    assert transaction.amount == Decimal("95.00")
+    assert transaction.amount == Decimal("75.00")
     assert transaction.direction is TransactionDirection.DEBIT
     assert transaction.description == "ANNUAL MEMBERSHIP FEE"
 
@@ -80,8 +80,8 @@ def test_parse_payment_and_credit_transaction() -> None:
             ActivityRow(
                 section=ActivitySection.PAYMENTS_AND_OTHER_CREDITS,
                 date_text="07/14",
-                description="Payment Thank You-Mobile",
-                amount_text="-130.92",
+                description="ONLINE PAYMENT",
+                amount_text="-245.60",
             ),
         ),
         period=StatementPeriod(
@@ -93,9 +93,9 @@ def test_parse_payment_and_credit_transaction() -> None:
     transaction = transactions[0]
 
     assert transaction.date == date(2026, 7, 14)
-    assert transaction.amount == Decimal("130.92")
+    assert transaction.amount == Decimal("245.60")
     assert transaction.direction is TransactionDirection.CREDIT
-    assert transaction.description == "Payment Thank You-Mobile"
+    assert transaction.description == "ONLINE PAYMENT"
 
 
 def test_parse_multiple_transactions_preserves_order() -> None:
@@ -104,20 +104,20 @@ def test_parse_multiple_transactions_preserves_order() -> None:
             ActivityRow(
                 section=ActivitySection.PAYMENTS_AND_OTHER_CREDITS,
                 date_text="06/10",
-                description="PAYMENT",
-                amount_text="-50.00",
+                description="ONLINE PAYMENT",
+                amount_text="-80.00",
             ),
             ActivityRow(
                 section=ActivitySection.PURCHASE,
                 date_text="06/17",
-                description="FIRST MERCHANT",
-                amount_text="1.66",
+                description="EXAMPLE STORE",
+                amount_text="24.35",
             ),
             ActivityRow(
                 section=ActivitySection.FEES_CHARGED,
                 date_text="07/01",
                 description="ANNUAL MEMBERSHIP FEE",
-                amount_text="95.00",
+                amount_text="75.00",
             ),
         ),
         period=StatementPeriod(
@@ -127,8 +127,8 @@ def test_parse_multiple_transactions_preserves_order() -> None:
     )
 
     assert [transaction.description for transaction in transactions] == [
-        "PAYMENT",
-        "FIRST MERCHANT",
+        "ONLINE PAYMENT",
+        "EXAMPLE STORE",
         "ANNUAL MEMBERSHIP FEE",
     ]
     assert [transaction.direction for transaction in transactions] == [
@@ -157,13 +157,13 @@ def test_transaction_date_resolves_across_year_boundary() -> None:
                 section=ActivitySection.PURCHASE,
                 date_text="12/20",
                 description="DECEMBER PURCHASE",
-                amount_text="10.00",
+                amount_text="14.00",
             ),
             ActivityRow(
                 section=ActivitySection.PURCHASE,
                 date_text="01/03",
                 description="JANUARY PURCHASE",
-                amount_text="20.00",
+                amount_text="22.00",
             ),
         ),
         period=StatementPeriod(
@@ -182,8 +182,8 @@ def test_transaction_date_can_precede_statement_period() -> None:
             ActivityRow(
                 section=ActivitySection.PURCHASE,
                 date_text="05/01",
-                description="TST*MALA SICHUAN - KATY Katy TX",
-                amount_text="62.54",
+                description="EXAMPLE CAFE",
+                amount_text="42.75",
             ),
         ),
         period=StatementPeriod(
@@ -206,7 +206,7 @@ def test_transaction_date_rejects_invalid_calendar_date() -> None:
                     section=ActivitySection.PURCHASE,
                     date_text="02/29",
                     description="INVALID DATE",
-                    amount_text="10.00",
+                    amount_text="12.00",
                 ),
             ),
             period=StatementPeriod(
@@ -226,8 +226,8 @@ def test_transaction_date_rejects_invalid_format() -> None:
                 ActivityRow(
                     section=ActivitySection.PURCHASE,
                     date_text="June 17",
-                    description="SAMPLE MERCHANT",
-                    amount_text="10.00",
+                    description="EXAMPLE MERCHANT",
+                    amount_text="12.00",
                 ),
             ),
             period=StatementPeriod(
@@ -248,7 +248,7 @@ def test_transaction_date_rejects_impossible_calendar_date() -> None:
                     section=ActivitySection.PURCHASE,
                     date_text="02/30",
                     description="INVALID DATE",
-                    amount_text="10.00",
+                    amount_text="12.00",
                 ),
             ),
             period=StatementPeriod(
@@ -265,7 +265,7 @@ def test_transaction_date_supports_leap_day() -> None:
                 section=ActivitySection.PURCHASE,
                 date_text="02/29",
                 description="LEAP DAY PURCHASE",
-                amount_text="10.00",
+                amount_text="16.00",
             ),
         ),
         period=StatementPeriod(
@@ -277,27 +277,6 @@ def test_transaction_date_supports_leap_day() -> None:
     assert transactions[0].date == date(2024, 2, 29)
 
 
-def test_transaction_date_rejects_ambiguous_year() -> None:
-    with pytest.raises(
-        ValueError,
-        match="is ambiguous for statement period",
-    ):
-        parse_activity_transactions(
-            (
-                ActivityRow(
-                    section=ActivitySection.PURCHASE,
-                    date_text="06/15",
-                    description="AMBIGUOUS DATE",
-                    amount_text="10.00",
-                ),
-            ),
-            period=StatementPeriod(
-                start=date(2026, 1, 1),
-                end=date(2027, 12, 31),
-            ),
-        )
-
-
 def test_parse_interest_charge_transaction() -> None:
     transactions = parse_activity_transactions(
         (
@@ -305,7 +284,7 @@ def test_parse_interest_charge_transaction() -> None:
                 section=ActivitySection.INTEREST_CHARGED,
                 date_text="05/03",
                 description="PURCHASE INTEREST CHARGE",
-                amount_text="5.22",
+                amount_text="6.40",
             ),
         ),
         period=StatementPeriod(
@@ -317,6 +296,48 @@ def test_parse_interest_charge_transaction() -> None:
     transaction = transactions[0]
 
     assert transaction.date == date(2026, 5, 3)
-    assert transaction.amount == Decimal("5.22")
+    assert transaction.amount == Decimal("6.40")
     assert transaction.direction is TransactionDirection.DEBIT
     assert transaction.description == "PURCHASE INTEREST CHARGE"
+
+
+def test_transaction_date_uses_prior_year_when_month_day_is_after_closing() -> (  # noqa: E501
+    None
+):
+    transactions = parse_activity_transactions(
+        (
+            ActivityRow(
+                section=ActivitySection.PAYMENTS_AND_OTHER_CREDITS,
+                date_text="12/24",
+                description="INTEREST CHARGE REVERSAL",
+                amount_text="-84.15",
+            ),
+        ),
+        period=StatementPeriod(
+            start=date(2024, 2, 25),
+            end=date(2024, 3, 24),
+        ),
+    )
+
+    assert transactions[0].date == date(2023, 12, 24)
+
+
+def test_transaction_date_rejects_invalid_prior_year_calendar_date() -> None:
+    with pytest.raises(
+        ValueError,
+        match="Invalid Chase transaction calendar date",
+    ):
+        parse_activity_transactions(
+            (
+                ActivityRow(
+                    section=ActivitySection.PURCHASE,
+                    date_text="02/29",
+                    description="INVALID PRIOR YEAR DATE",
+                    amount_text="12.00",
+                ),
+            ),
+            period=StatementPeriod(
+                start=date(2024, 1, 1),
+                end=date(2024, 1, 31),
+            ),
+        )

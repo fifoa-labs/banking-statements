@@ -34,20 +34,41 @@ def test_parse_identity() -> None:
         make_statement_text(
             "\n".join(  # noqa: FLY002
                 (
-                    "Account Number: XXXX XXXX XXXX 9062",
-                    "Opening/Closing Date 03/12/26 - 04/11/26",
-                    "Statement Date: 04/11/26",
+                    "Account Number: XXXX XXXX XXXX 1234",
+                    "Opening/Closing Date 03/10/26 - 04/09/26",
+                    "Statement Date: 04/09/26",
                 )
             )
         )
     )
 
     assert identity.account.account_type is AccountType.CREDIT_CARD
-    assert identity.account.display_number == "XXXX XXXX XXXX 9062"
-    assert identity.account.last4 == "9062"
-    assert identity.statement_start == date(2026, 3, 12)
-    assert identity.statement_end == date(2026, 4, 11)
-    assert identity.statement_date == date(2026, 4, 11)
+    assert identity.account.display_number == "XXXX XXXX XXXX 1234"
+    assert identity.account.last4 == "1234"
+    assert identity.statement_start == date(2026, 3, 10)
+    assert identity.statement_end == date(2026, 4, 9)
+    assert identity.statement_date == date(2026, 4, 9)
+
+
+def test_parse_identity_accepts_mangled_opening_closing_marker() -> None:
+    identity = parse_identity(
+        make_statement_text(
+            "\n".join(  # noqa: FLY002
+                (
+                    "Account Number: 1111 2222 3333 4444",
+                    "O`pening/Closing Date 12/08/20 - 01/07/21",
+                    "Statement Date: 01/07/21",
+                )
+            )
+        )
+    )
+
+    assert identity.account.account_type is AccountType.CREDIT_CARD
+    assert identity.account.display_number == "1111 2222 3333 4444"
+    assert identity.account.last4 == "4444"
+    assert identity.statement_start == date(2020, 12, 8)
+    assert identity.statement_end == date(2021, 1, 7)
+    assert identity.statement_date == date(2021, 1, 7)
 
 
 def test_parse_identity_accepts_lowercase_account_number_marker() -> None:
@@ -55,20 +76,20 @@ def test_parse_identity_accepts_lowercase_account_number_marker() -> None:
         make_statement_text(
             "\n".join(  # noqa: FLY002
                 (
-                    "Account number: XXXX XXXX XXXX 7001",
-                    "Opening/Closing Date 12/10/24 - 01/09/25",
-                    "Statement Date: 01/09/25",
+                    "Account number: XXXX XXXX XXXX 5678",
+                    "Opening/Closing Date 11/15/24 - 12/14/24",
+                    "Statement Date: 12/14/24",
                 )
             )
         )
     )
 
     assert identity.account.account_type is AccountType.CREDIT_CARD
-    assert identity.account.display_number == "XXXX XXXX XXXX 7001"
-    assert identity.account.last4 == "7001"
-    assert identity.statement_start == date(2024, 12, 10)
-    assert identity.statement_end == date(2025, 1, 9)
-    assert identity.statement_date == date(2025, 1, 9)
+    assert identity.account.display_number == "XXXX XXXX XXXX 5678"
+    assert identity.account.last4 == "5678"
+    assert identity.statement_start == date(2024, 11, 15)
+    assert identity.statement_end == date(2024, 12, 14)
+    assert identity.statement_date == date(2024, 12, 14)
 
 
 def test_parse_identity_requires_account_number() -> None:
@@ -80,8 +101,8 @@ def test_parse_identity_requires_account_number() -> None:
             make_statement_text(
                 "\n".join(  # noqa: FLY002
                     (
-                        "Opening/Closing Date 03/12/26 - 04/11/26",
-                        "Statement Date: 04/11/26",
+                        "Opening/Closing Date 03/10/26 - 04/09/26",
+                        "Statement Date: 04/09/26",
                     )
                 )
             )
@@ -97,8 +118,8 @@ def test_parse_identity_requires_statement_period() -> None:
             make_statement_text(
                 "\n".join(  # noqa: FLY002
                     (
-                        "Account Number: XXXX XXXX XXXX 9062",
-                        "Statement Date: 04/11/26",
+                        "Account Number: XXXX XXXX XXXX 1234",
+                        "Statement Date: 04/09/26",
                     )
                 )
             )
@@ -114,8 +135,8 @@ def test_parse_identity_requires_statement_date() -> None:
             make_statement_text(
                 "\n".join(  # noqa: FLY002
                     (
-                        "Account Number: XXXX XXXX XXXX 9062",
-                        "Opening/Closing Date 03/12/26 - 04/11/26",
+                        "Account Number: XXXX XXXX XXXX 1234",
+                        "Opening/Closing Date 03/10/26 - 04/09/26",
                     )
                 )
             )
@@ -131,9 +152,73 @@ def test_parse_identity_requires_matching_closing_date() -> None:
             make_statement_text(
                 "\n".join(  # noqa: FLY002
                     (
-                        "Account Number: XXXX XXXX XXXX 9062",
-                        "Opening/Closing Date 03/12/26 - 04/11/26",
-                        "Statement Date: 04/12/26",
+                        "Account Number: XXXX XXXX XXXX 1234",
+                        "Opening/Closing Date 03/10/26 - 04/09/26",
+                        "Statement Date: 04/10/26",
+                    )
+                )
+            )
+        )
+
+
+def test_parse_identity_accepts_unmasked_account_number() -> None:
+    identity = parse_identity(
+        make_statement_text(
+            "\n".join(  # noqa: FLY002
+                (
+                    "Account Number: 5555 6666 7777 8888",
+                    "Opening/Closing Date 12/02/23 - 01/01/24",
+                    "Statement Date: 01/01/24",
+                )
+            )
+        )
+    )
+
+    assert identity.account.account_type is AccountType.CREDIT_CARD
+    assert identity.account.display_number == "5555 6666 7777 8888"
+    assert identity.account.last4 == "8888"
+    assert identity.statement_start == date(2023, 12, 2)
+    assert identity.statement_end == date(2024, 1, 1)
+    assert identity.statement_date == date(2024, 1, 1)
+
+
+def test_parse_identity_accepts_unlabeled_account_number_fallback() -> None:
+    identity = parse_identity(
+        make_statement_text(
+            "\n".join(  # noqa: FLY002
+                (
+                    (
+                        "A A A c CC cou CC nt OO Nu UU m NN ber TT : "
+                        "2222 3333 4444 5555"
+                    ),
+                    "Opening/Closing Date 08/05/22 - 09/04/22",
+                    "Statement Date: 09/04/22",
+                )
+            )
+        )
+    )
+
+    assert identity.account.account_type is AccountType.CREDIT_CARD
+    assert identity.account.display_number == "2222 3333 4444 5555"
+    assert identity.account.last4 == "5555"
+    assert identity.statement_start == date(2022, 8, 5)
+    assert identity.statement_end == date(2022, 9, 4)
+    assert identity.statement_date == date(2022, 9, 4)
+
+
+def test_parse_identity_rejects_multiple_unlabeled_account_numbers() -> None:
+    with pytest.raises(
+        ValueError,
+        match="account number was not found uniquely",
+    ):
+        parse_identity(
+            make_statement_text(
+                "\n".join(  # noqa: FLY002
+                    (
+                        "1111 2222 3333 4444",
+                        "5555 6666 7777 8888",
+                        "Opening/Closing Date 08/05/22 - 09/04/22",
+                        "Statement Date: 09/04/22",
                     )
                 )
             )
