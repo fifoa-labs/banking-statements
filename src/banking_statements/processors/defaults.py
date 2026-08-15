@@ -16,6 +16,7 @@ from banking_statements.processors.registry import ProcessorRegistry
 from banking_statements.processors.wellsfargo import (
     WELLS_FARGO_SIGNATURES,
     WellsFargoCheckingProcessor,
+    WellsFargoCreditCardProcessor,
 )
 
 
@@ -36,5 +37,6 @@ def build_default_processor_registry() -> ProcessorRegistry:
             ChaseCreditCardProcessor(),
             ChaseCheckingProcessor(),
             WellsFargoCheckingProcessor(),
+            WellsFargoCreditCardProcessor(),
         )
     )

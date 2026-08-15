@@ -27,6 +27,18 @@ WELLS_FARGO_CHECKING_SIGNATURES = (
     ),
 )
 
+WELLS_FARGO_CREDIT_CARD_SIGNATURES = (
+    InstitutionSignature(
+        institution="wellsfargo",
+        required_markers=(
+            "Account ending in",
+            "Statement Period",
+            "Account Summary",
+            "Transactions",
+        ),
+    ),
+)
+
 WELLS_FARGO_SIGNATURES = (
     InstitutionSignature(
         institution="wellsfargo",
@@ -36,4 +48,5 @@ WELLS_FARGO_SIGNATURES = (
         ),
     ),
     *WELLS_FARGO_CHECKING_SIGNATURES,
+    *WELLS_FARGO_CREDIT_CARD_SIGNATURES,
 )
