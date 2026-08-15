@@ -50,6 +50,18 @@ WELLS_FARGO_BUSINESS_CHECKING_SIGNATURES = (
     ),
 )
 
+WELLS_FARGO_BUSINESS_CREDIT_CARD_SIGNATURES = (
+    InstitutionSignature(
+        institution="wellsfargo",
+        required_markers=(
+            "CONSOLIDATED BILLING CONTROL ACCOUNT STATEMENT",
+            "Statement Closing Date",
+            "Days in Billing Cycle",
+            "Account Summary",
+        ),
+    ),
+)
+
 WELLS_FARGO_SIGNATURES = (
     InstitutionSignature(
         institution="wellsfargo",
@@ -61,4 +73,5 @@ WELLS_FARGO_SIGNATURES = (
     *WELLS_FARGO_CHECKING_SIGNATURES,
     *WELLS_FARGO_CREDIT_CARD_SIGNATURES,
     *WELLS_FARGO_BUSINESS_CHECKING_SIGNATURES,
+    *WELLS_FARGO_BUSINESS_CREDIT_CARD_SIGNATURES,
 )

@@ -203,7 +203,7 @@ def run_archive_smoke(
         except Exception as exc:  # noqa: BLE001
             failures += 1
 
-            print(f"{label} FAIL {path.name}")  # noqa: T201
+            print(f"{label} FAIL {path}")  # noqa: T201
             print(  # noqa: T201
                 f"         {type(exc).__name__}: {exc}",
             )
@@ -301,7 +301,7 @@ def _print_success(  # noqa: PLR0913
     reconciliation_is_warning: bool,
 ) -> None:
     """Print a successful normalized statement summary."""
-    print(f"{label} PASS {path.name}")  # noqa: T201
+    print(f"{label} PASS {path}")  # noqa: T201
 
     _print_statement_details(
         statement=statement,
@@ -334,7 +334,7 @@ def _print_failure(  # noqa: PLR0913
     show_transactions: bool,
 ) -> None:
     """Print a reconciliation failure for an otherwise parsed statement."""
-    print(f"{label} FAIL {path.name}")  # noqa: T201
+    print(f"{label} FAIL {path}")  # noqa: T201
 
     _print_statement_details(
         statement=statement,

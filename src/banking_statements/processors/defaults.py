@@ -16,6 +16,7 @@ from banking_statements.processors.registry import ProcessorRegistry
 from banking_statements.processors.wellsfargo import (
     WELLS_FARGO_SIGNATURES,
     WellsFargoBusinessCheckingProcessor,
+    WellsFargoBusinessCreditCardProcessor,
     WellsFargoCheckingProcessor,
     WellsFargoCreditCardProcessor,
 )
@@ -32,7 +33,7 @@ def build_default_institution_detector() -> InstitutionDetector:
 
 
 def build_default_processor_registry() -> ProcessorRegistry:
-    """Build the package-default statement processor registry."""
+    """Return the registry containing all supported statement processors."""
     return ProcessorRegistry(
         (
             ChaseCreditCardProcessor(),
@@ -40,5 +41,6 @@ def build_default_processor_registry() -> ProcessorRegistry:
             WellsFargoCheckingProcessor(),
             WellsFargoCreditCardProcessor(),
             WellsFargoBusinessCheckingProcessor(),
+            WellsFargoBusinessCreditCardProcessor(),
         )
     )

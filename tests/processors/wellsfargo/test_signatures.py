@@ -9,6 +9,7 @@ from __future__ import annotations
 from banking_statements.processors.detection import InstitutionDetector
 from banking_statements.processors.wellsfargo import (
     WELLS_FARGO_BUSINESS_CHECKING_SIGNATURES,
+    WELLS_FARGO_BUSINESS_CREDIT_CARD_SIGNATURES,
     WELLS_FARGO_CHECKING_SIGNATURES,
     WELLS_FARGO_CREDIT_CARD_SIGNATURES,
     WELLS_FARGO_SIGNATURES,
@@ -94,6 +95,24 @@ def test_wells_fargo_business_checking_signature_detects_statement() -> None:
             "Statement period activity summary Account number: 1234567890\n"
             "Withdrawals/Debits - 250.00\n"
             "Transaction history\n"
+        )
+    )
+
+    assert result == "wellsfargo"
+
+
+def test_wells_fargo_business_credit_card_signature_detects_statement() -> (
+    None
+):
+    detector = InstitutionDetector(WELLS_FARGO_BUSINESS_CREDIT_CARD_SIGNATURES)
+
+    result = detector.detect(
+        make_statement_text(
+            "SAMPLE BUSINESS CARD\n"
+            "CONSOLIDATED BILLING CONTROL ACCOUNT STATEMENT\n"
+            "Statement Closing Date 01/27/25\n"
+            "Days in Billing Cycle 31\n"
+            "Account Summary\n"
         )
     )
 

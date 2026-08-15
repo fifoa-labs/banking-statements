@@ -7,10 +7,12 @@ Wells Fargo statement processor support.
 from __future__ import annotations
 
 from .business_checking import WellsFargoBusinessCheckingProcessor
+from .business_credit_card import WellsFargoBusinessCreditCardProcessor
 from .checking import WellsFargoCheckingProcessor
 from .credit_card import WellsFargoCreditCardProcessor
 from .signatures import (
     WELLS_FARGO_BUSINESS_CHECKING_SIGNATURES,
+    WELLS_FARGO_BUSINESS_CREDIT_CARD_SIGNATURES,
     WELLS_FARGO_CHECKING_SIGNATURES,
     WELLS_FARGO_CREDIT_CARD_SIGNATURES,
     WELLS_FARGO_SIGNATURES,
@@ -18,10 +20,12 @@ from .signatures import (
 
 __all__ = [
     "WELLS_FARGO_BUSINESS_CHECKING_SIGNATURES",
+    "WELLS_FARGO_BUSINESS_CREDIT_CARD_SIGNATURES",
     "WELLS_FARGO_CHECKING_SIGNATURES",
     "WELLS_FARGO_CREDIT_CARD_SIGNATURES",
     "WELLS_FARGO_SIGNATURES",
     "WellsFargoBusinessCheckingProcessor",
+    "WellsFargoBusinessCreditCardProcessor",
     "WellsFargoCheckingProcessor",
     "WellsFargoCreditCardProcessor",
 ]
