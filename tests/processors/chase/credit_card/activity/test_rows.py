@@ -35,7 +35,7 @@ def test_parse_simple_purchase_row() -> None:
                     "Date of",
                     "Transaction Merchant Name or Transaction Description $ Amount",  # noqa: E501
                     "PURCHASE",
-                    "03/30 RVT*Katy ISD 281-3966000 TX 8.25",
+                    "03/30 EXAMPLE MARKETPLACE 18.45",
                     "2026 Totals Year-to-Date",
                 )
             )
@@ -46,8 +46,8 @@ def test_parse_simple_purchase_row() -> None:
         ActivityRow(
             section=ActivitySection.PURCHASE,
             date_text="03/30",
-            description="RVT*Katy ISD 281-3966000 TX",
-            amount_text="8.25",
+            description="EXAMPLE MARKETPLACE",
+            amount_text="18.45",
         ),
     )
 
@@ -58,11 +58,11 @@ def test_parse_payments_and_other_credits_rows() -> None:
             "\n".join(  # noqa: FLY002
                 (
                     "PAYMENTS AND OTHER CREDITS",
-                    "07/14 Payment Thank You-Mobile -130.92",
-                    "07/28 AMAZON MKTPLACE PMTS Amzn.com/bill WA -38.94",
-                    "07/27 THE HOME DEPOT #6860 SUGARLAND TX -60.97",
+                    "07/14 ONLINE PAYMENT -245.60",
+                    "07/28 MERCHANT REFUND -31.25",
+                    "07/27 SAMPLE STORE REFUND -48.70",
                     "PURCHASE",
-                    "07/04 SAMPLE PURCHASE 20.68",
+                    "07/04 SAMPLE PURCHASE 27.80",
                     "2026 Totals Year-to-Date",
                 )
             )
@@ -73,26 +73,26 @@ def test_parse_payments_and_other_credits_rows() -> None:
         ActivityRow(
             section=ActivitySection.PAYMENTS_AND_OTHER_CREDITS,
             date_text="07/14",
-            description="Payment Thank You-Mobile",
-            amount_text="-130.92",
+            description="ONLINE PAYMENT",
+            amount_text="-245.60",
         ),
         ActivityRow(
             section=ActivitySection.PAYMENTS_AND_OTHER_CREDITS,
             date_text="07/28",
-            description="AMAZON MKTPLACE PMTS Amzn.com/bill WA",
-            amount_text="-38.94",
+            description="MERCHANT REFUND",
+            amount_text="-31.25",
         ),
         ActivityRow(
             section=ActivitySection.PAYMENTS_AND_OTHER_CREDITS,
             date_text="07/27",
-            description="THE HOME DEPOT #6860 SUGARLAND TX",
-            amount_text="-60.97",
+            description="SAMPLE STORE REFUND",
+            amount_text="-48.70",
         ),
         ActivityRow(
             section=ActivitySection.PURCHASE,
             date_text="07/04",
             description="SAMPLE PURCHASE",
-            amount_text="20.68",
+            amount_text="27.80",
         ),
     )
 
@@ -103,9 +103,9 @@ def test_parse_foreign_currency_purchase_continuation() -> None:
             "\n".join(  # noqa: FLY002
                 (
                     "PURCHASE",
-                    "06/17 Grab* A-9FNGAQLWWUVDAV HA NOI 1.66",
-                    "06/18 DONG",
-                    "43,680 X 0.000038003 (EXCHG RATE)",
+                    "06/17 EXAMPLE FOREIGN MERCHANT 2.45",
+                    "06/18 TESTCUR",
+                    "52,000 X 0.000047115 (EXCHG RATE)",
                     "2026 Totals Year-to-Date",
                 )
             )
@@ -116,11 +116,11 @@ def test_parse_foreign_currency_purchase_continuation() -> None:
         ActivityRow(
             section=ActivitySection.PURCHASE,
             date_text="06/17",
-            description="Grab* A-9FNGAQLWWUVDAV HA NOI",
-            amount_text="1.66",
+            description="EXAMPLE FOREIGN MERCHANT",
+            amount_text="2.45",
             continuation_lines=(
-                "06/18 DONG",
-                "43,680 X 0.000038003 (EXCHG RATE)",
+                "06/18 TESTCUR",
+                "52,000 X 0.000047115 (EXCHG RATE)",
             ),
         ),
     )
@@ -132,8 +132,8 @@ def test_parse_fee_row() -> None:
             "\n".join(  # noqa: FLY002
                 (
                     "FEES CHARGED",
-                    "07/01 ANNUAL MEMBERSHIP FEE 95.00",
-                    "TOTAL FEES FOR THIS PERIOD $95.00",
+                    "07/01 ANNUAL MEMBERSHIP FEE 75.00",
+                    "TOTAL FEES FOR THIS PERIOD $75.00",
                 )
             )
         )
@@ -144,7 +144,7 @@ def test_parse_fee_row() -> None:
             section=ActivitySection.FEES_CHARGED,
             date_text="07/01",
             description="ANNUAL MEMBERSHIP FEE",
-            amount_text="95.00",
+            amount_text="75.00",
         ),
     )
 
@@ -155,10 +155,10 @@ def test_parse_multiple_sections() -> None:
             "\n".join(  # noqa: FLY002
                 (
                     "PURCHASE",
-                    "06/17 SAMPLE MERCHANT 1.66",
+                    "06/17 SAMPLE MERCHANT 12.35",
                     "FEES CHARGED",
-                    "07/01 ANNUAL MEMBERSHIP FEE 95.00",
-                    "TOTAL FEES FOR THIS PERIOD $95.00",
+                    "07/01 ANNUAL MEMBERSHIP FEE 75.00",
+                    "TOTAL FEES FOR THIS PERIOD $75.00",
                 )
             )
         )
@@ -169,13 +169,13 @@ def test_parse_multiple_sections() -> None:
             section=ActivitySection.PURCHASE,
             date_text="06/17",
             description="SAMPLE MERCHANT",
-            amount_text="1.66",
+            amount_text="12.35",
         ),
         ActivityRow(
             section=ActivitySection.FEES_CHARGED,
             date_text="07/01",
             description="ANNUAL MEMBERSHIP FEE",
-            amount_text="95.00",
+            amount_text="75.00",
         ),
     )
 
@@ -188,7 +188,7 @@ def test_ignores_blank_lines() -> None:
                     "",
                     "PURCHASE",
                     "",
-                    "03/30 SAMPLE MERCHANT 8.25",
+                    "03/30 SAMPLE MERCHANT 18.45",
                     "",
                     "2026 Totals Year-to-Date",
                 )
@@ -201,7 +201,7 @@ def test_ignores_blank_lines() -> None:
             section=ActivitySection.PURCHASE,
             date_text="03/30",
             description="SAMPLE MERCHANT",
-            amount_text="8.25",
+            amount_text="18.45",
         ),
     )
 
@@ -212,7 +212,7 @@ def test_ignores_text_outside_activity_sections() -> None:
             "\n".join(  # noqa: FLY002
                 (
                     "ACCOUNT SUMMARY",
-                    "03/30 THIS LOOKS LIKE A TRANSACTION 8.25",
+                    "03/30 THIS LOOKS LIKE A TRANSACTION 18.45",
                     "OTHER TEXT",
                 )
             )
@@ -228,9 +228,9 @@ def test_section_change_flushes_pending_row() -> None:
             "\n".join(  # noqa: FLY002
                 (
                     "PURCHASE",
-                    "06/17 SAMPLE MERCHANT 1.66",
+                    "06/17 SAMPLE MERCHANT 12.35",
                     "FEES CHARGED",
-                    "07/01 ANNUAL MEMBERSHIP FEE 95.00",
+                    "07/01 ANNUAL MEMBERSHIP FEE 75.00",
                 )
             )
         )
@@ -241,13 +241,13 @@ def test_section_change_flushes_pending_row() -> None:
             section=ActivitySection.PURCHASE,
             date_text="06/17",
             description="SAMPLE MERCHANT",
-            amount_text="1.66",
+            amount_text="12.35",
         ),
         ActivityRow(
             section=ActivitySection.FEES_CHARGED,
             date_text="07/01",
             description="ANNUAL MEMBERSHIP FEE",
-            amount_text="95.00",
+            amount_text="75.00",
         ),
     )
 
@@ -259,7 +259,7 @@ def test_stop_marker_without_pending_row_ends_section() -> None:
                 (
                     "PURCHASE",
                     "2026 Totals Year-to-Date",
-                    "03/30 SHOULD NOT PARSE 8.25",
+                    "03/30 SHOULD NOT PARSE 18.45",
                 )
             )
         )
@@ -274,9 +274,9 @@ def test_stop_marker_flushes_pending_row() -> None:
             "\n".join(  # noqa: FLY002
                 (
                     "PURCHASE",
-                    "03/30 SAMPLE MERCHANT 8.25",
+                    "03/30 SAMPLE MERCHANT 18.45",
                     "2026 Totals Year-to-Date",
-                    "03/31 SHOULD NOT PARSE 9.25",
+                    "03/31 SHOULD NOT PARSE 21.90",
                 )
             )
         )
@@ -287,7 +287,7 @@ def test_stop_marker_flushes_pending_row() -> None:
             section=ActivitySection.PURCHASE,
             date_text="03/30",
             description="SAMPLE MERCHANT",
-            amount_text="8.25",
+            amount_text="18.45",
         ),
     )
 
@@ -298,8 +298,8 @@ def test_consecutive_transaction_rows_flush_previous_row() -> None:
             "\n".join(  # noqa: FLY002
                 (
                     "PURCHASE",
-                    "06/17 FIRST MERCHANT 1.66",
-                    "06/18 SECOND MERCHANT 2.25",
+                    "06/17 FIRST MERCHANT 12.35",
+                    "06/18 SECOND MERCHANT 24.80",
                     "2026 Totals Year-to-Date",
                 )
             )
@@ -311,13 +311,13 @@ def test_consecutive_transaction_rows_flush_previous_row() -> None:
             section=ActivitySection.PURCHASE,
             date_text="06/17",
             description="FIRST MERCHANT",
-            amount_text="1.66",
+            amount_text="12.35",
         ),
         ActivityRow(
             section=ActivitySection.PURCHASE,
             date_text="06/18",
             description="SECOND MERCHANT",
-            amount_text="2.25",
+            amount_text="24.80",
         ),
     )
 
@@ -328,8 +328,8 @@ def test_continuation_without_pending_row_is_ignored() -> None:
             "\n".join(  # noqa: FLY002
                 (
                     "PURCHASE",
-                    "06/18 DONG",
-                    "43,680 X 0.000038003 (EXCHG RATE)",
+                    "06/18 TESTCUR",
+                    "52,000 X 0.000047115 (EXCHG RATE)",
                     "2026 Totals Year-to-Date",
                 )
             )
@@ -345,7 +345,7 @@ def test_unknown_line_with_pending_row_is_ignored() -> None:
             "\n".join(  # noqa: FLY002
                 (
                     "PURCHASE",
-                    "03/30 SAMPLE MERCHANT 8.25",
+                    "03/30 SAMPLE MERCHANT 18.45",
                     "SOME UNRECOGNIZED DETAIL",
                     "2026 Totals Year-to-Date",
                 )
@@ -358,7 +358,7 @@ def test_unknown_line_with_pending_row_is_ignored() -> None:
             section=ActivitySection.PURCHASE,
             date_text="03/30",
             description="SAMPLE MERCHANT",
-            amount_text="8.25",
+            amount_text="18.45",
         ),
     )
 
@@ -369,7 +369,7 @@ def test_final_pending_row_is_flushed_at_end_of_text() -> None:
             "\n".join(  # noqa: FLY002
                 (
                     "PURCHASE",
-                    "03/30 SAMPLE MERCHANT 8.25",
+                    "03/30 SAMPLE MERCHANT 18.45",
                 )
             )
         )
@@ -380,7 +380,7 @@ def test_final_pending_row_is_flushed_at_end_of_text() -> None:
             section=ActivitySection.PURCHASE,
             date_text="03/30",
             description="SAMPLE MERCHANT",
-            amount_text="8.25",
+            amount_text="18.45",
         ),
     )
 
@@ -391,9 +391,9 @@ def test_year_to_date_marker_is_not_year_specific() -> None:
             "\n".join(  # noqa: FLY002
                 (
                     "PURCHASE",
-                    "12/20 SAMPLE MERCHANT 10.00",
+                    "12/20 SAMPLE MERCHANT 14.00",
                     "2031 Totals Year-to-Date",
-                    "12/21 SHOULD NOT PARSE 20.00",
+                    "12/21 SHOULD NOT PARSE 28.00",
                 )
             )
         )
@@ -404,7 +404,7 @@ def test_year_to_date_marker_is_not_year_specific() -> None:
             section=ActivitySection.PURCHASE,
             date_text="12/20",
             description="SAMPLE MERCHANT",
-            amount_text="10.00",
+            amount_text="14.00",
         ),
     )
 
@@ -415,8 +415,8 @@ def test_total_fees_summary_ends_activity_section() -> None:
             "\n".join(  # noqa: FLY002
                 (
                     "FEES CHARGED",
-                    "07/01 ANNUAL MEMBERSHIP FEE 95.00",
-                    "Total fees charged in 2026 $95.00",
+                    "07/01 ANNUAL MEMBERSHIP FEE 75.00",
+                    "Total fees charged in 2026 $75.00",
                     "07/02 SHOULD NOT PARSE 20.00",
                 )
             )
@@ -433,9 +433,9 @@ def test_total_interest_summary_ends_activity_section() -> None:
             "\n".join(  # noqa: FLY002
                 (
                     "PURCHASE",
-                    "03/30 SAMPLE MERCHANT 8.25",
+                    "03/30 SAMPLE MERCHANT 18.45",
                     "Total interest charged in 2026 $0.00",
-                    "03/31 SHOULD NOT PARSE 9.25",
+                    "03/31 SHOULD NOT PARSE 21.90",
                 )
             )
         )
@@ -451,10 +451,10 @@ def test_parse_interest_charge_row() -> None:
             "\n".join(  # noqa: FLY002
                 (
                     "PAYMENTS AND OTHER CREDITS",
-                    "04/27 Payment Thank You-Mobile -421.20",
+                    "04/27 ONLINE PAYMENT -325.00",
                     "INTEREST CHARGED",
-                    "05/03 PURCHASE INTEREST CHARGE 5.22",
-                    "TOTAL INTEREST FOR THIS PERIOD $5.22",
+                    "05/03 PURCHASE INTEREST CHARGE 6.40",
+                    "TOTAL INTEREST FOR THIS PERIOD $6.40",
                 )
             )
         )
@@ -464,14 +464,14 @@ def test_parse_interest_charge_row() -> None:
         ActivityRow(
             section=ActivitySection.PAYMENTS_AND_OTHER_CREDITS,
             date_text="04/27",
-            description="Payment Thank You-Mobile",
-            amount_text="-421.20",
+            description="ONLINE PAYMENT",
+            amount_text="-325.00",
         ),
         ActivityRow(
             section=ActivitySection.INTEREST_CHARGED,
             date_text="05/03",
             description="PURCHASE INTEREST CHARGE",
-            amount_text="5.22",
+            amount_text="6.40",
         ),
     )
 
@@ -482,12 +482,12 @@ def test_parse_balance_transfer_row() -> None:
             "\n".join(  # noqa: FLY002
                 (
                     "PAYMENTS AND OTHER CREDITS",
-                    "02/24 PROMOTIONAL ADJUSTMENT -9,760.36",
+                    "02/24 SYNTHETIC PROMOTIONAL ADJUSTMENT -6,400.00",
                     "BALANCE TRANSFERS",
-                    "02/24 PROMOTIONAL ADJUSTMENT 9,760.36",
+                    "02/24 SYNTHETIC PROMOTIONAL ADJUSTMENT 6,400.00",
                     "INTEREST CHARGED",
-                    "02/25 PURCHASE INTEREST CHRG DEBIT ADJ 5.68",
-                    "TOTAL INTEREST FOR THIS PERIOD $5.68",
+                    "02/25 PURCHASE INTEREST CHRG DEBIT ADJ 7.35",
+                    "TOTAL INTEREST FOR THIS PERIOD $7.35",
                 )
             )
         )
@@ -497,20 +497,20 @@ def test_parse_balance_transfer_row() -> None:
         ActivityRow(
             section=ActivitySection.PAYMENTS_AND_OTHER_CREDITS,
             date_text="02/24",
-            description="PROMOTIONAL ADJUSTMENT",
-            amount_text="-9,760.36",
+            description="SYNTHETIC PROMOTIONAL ADJUSTMENT",
+            amount_text="-6,400.00",
         ),
         ActivityRow(
             section=ActivitySection.BALANCE_TRANSFERS,
             date_text="02/24",
-            description="PROMOTIONAL ADJUSTMENT",
-            amount_text="9,760.36",
+            description="SYNTHETIC PROMOTIONAL ADJUSTMENT",
+            amount_text="6,400.00",
         ),
         ActivityRow(
             section=ActivitySection.INTEREST_CHARGED,
             date_text="02/25",
             description="PURCHASE INTEREST CHRG DEBIT ADJ",
-            amount_text="5.68",
+            amount_text="7.35",
         ),
     )
 
@@ -521,7 +521,7 @@ def test_parse_my_chase_loan_as_balance_transfer_row() -> None:
             "\n".join(  # noqa: FLY002
                 (
                     "BALANCE TRANSFERS / MY CHASE LOAN",
-                    "03/27 My Chase Loan TO 0387 8,000.00",
+                    "03/27 My Chase Loan TO 9999 5,500.00",
                     "2021 Totals Year-to-Date",
                 )
             )
@@ -532,7 +532,7 @@ def test_parse_my_chase_loan_as_balance_transfer_row() -> None:
         ActivityRow(
             section=ActivitySection.BALANCE_TRANSFERS,
             date_text="03/27",
-            description="My Chase Loan TO 0387",
-            amount_text="8,000.00",
+            description="My Chase Loan TO 9999",
+            amount_text="5,500.00",
         ),
     )
