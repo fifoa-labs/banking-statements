@@ -78,6 +78,7 @@ from banking_statements.domain import StatementSource
 from banking_statements.processors import ProcessorRegistry
 from banking_statements.processors.chase import (
     CHASE_SIGNATURES,
+    ChaseCheckingProcessor,
     ChaseCreditCardProcessor,
 )
 from banking_statements.processors.chase.credit_card.activity import (
@@ -167,6 +168,7 @@ def build_processor_registry() -> ProcessorRegistry:
     return ProcessorRegistry(
         [
             ChaseCreditCardProcessor(),
+            ChaseCheckingProcessor(),
         ]
     )
 
