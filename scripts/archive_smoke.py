@@ -1,18 +1,23 @@
 """
 scripts/archive_smoke.py
 
-Run private banking statement PDFs through institution detection.
+Run private banking statement PDFs through the supported processing pipeline.
 """
 
 from __future__ import annotations
 
 import argparse
 import traceback
+from hashlib import sha256
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from banking_statements.domain import StatementSource
-from banking_statements.processors.chase import CHASE_SIGNATURES
+from banking_statements.processors import ProcessorRegistry
+from banking_statements.processors.chase import (
+    CHASE_SIGNATURES,
+    ChaseCreditCardProcessor,
+)
 from banking_statements.processors.detection import InstitutionDetector
 from banking_statements.text import PdfStatementTextReader
 
@@ -24,8 +29,7 @@ def build_parser() -> argparse.ArgumentParser:
     """Build the command-line argument parser."""
     parser = argparse.ArgumentParser(
         description=(
-            "Run private banking statement PDFs through "
-            "banking-statements institution detection."
+            "Run private banking statement PDFs through banking-statements."
         ),
     )
     parser.add_argument(
@@ -72,14 +76,21 @@ def discover_statements(
 
 
 def build_institution_detector() -> InstitutionDetector:
-    """Return detector configured with implemented institution signatures."""
+    """Return detector configured with implemented institutions."""
     return InstitutionDetector((*CHASE_SIGNATURES,))
+
+
+def build_processor_registry() -> ProcessorRegistry:
+    """Return registry containing implemented statement processors."""
+    return ProcessorRegistry(
+        [
+            ChaseCreditCardProcessor(),
+        ]
+    )
 
 
 def file_sha256(path: Path) -> str:
     """Return the SHA-256 digest for a statement file."""
-    from hashlib import sha256  # noqa: PLC0415
-
     digest = sha256()
 
     with path.open("rb") as source_file:
@@ -98,6 +109,7 @@ def run_archive_smoke(
     """Inspect statements and return the number of failures."""
     reader = PdfStatementTextReader()
     detector = build_institution_detector()
+    registry = build_processor_registry()
 
     failures = 0
     total = len(statements)
@@ -115,6 +127,7 @@ def run_archive_smoke(
             )
             text = reader.read(source)
             institution = detector.detect(text)
+            processor = registry.select(text)
         except Exception as exc:  # noqa: BLE001
             failures += 1
 
@@ -135,6 +148,7 @@ def run_archive_smoke(
             label,
             path,
             institution=institution,
+            processor=processor.name,
             page_count=len(text.pages),
         )
 
@@ -146,12 +160,16 @@ def _print_success(
     path: Path,
     *,
     institution: str,
+    processor: str,
     page_count: int,
 ) -> None:
-    """Print a concise statement-detection summary."""
+    """Print a concise statement-processing summary."""
     print(f"{label} PASS {path.name}")  # noqa: T201
     print(  # noqa: T201
-        f"         institution={institution} pages={page_count}",
+        "         "
+        f"institution={institution} "
+        f"processor={processor} "
+        f"pages={page_count}",
     )
 
 
