@@ -52,6 +52,51 @@ def test_parse_simple_purchase_row() -> None:
     )
 
 
+def test_parse_payments_and_other_credits_rows() -> None:
+    rows = parse_activity_rows(
+        make_statement_text(
+            "\n".join(  # noqa: FLY002
+                (
+                    "PAYMENTS AND OTHER CREDITS",
+                    "07/14 Payment Thank You-Mobile -130.92",
+                    "07/28 AMAZON MKTPLACE PMTS Amzn.com/bill WA -38.94",
+                    "07/27 THE HOME DEPOT #6860 SUGARLAND TX -60.97",
+                    "PURCHASE",
+                    "07/04 SAMPLE PURCHASE 20.68",
+                    "2026 Totals Year-to-Date",
+                )
+            )
+        )
+    )
+
+    assert rows == (
+        ActivityRow(
+            section=ActivitySection.PAYMENTS_AND_OTHER_CREDITS,
+            date_text="07/14",
+            description="Payment Thank You-Mobile",
+            amount_text="-130.92",
+        ),
+        ActivityRow(
+            section=ActivitySection.PAYMENTS_AND_OTHER_CREDITS,
+            date_text="07/28",
+            description="AMAZON MKTPLACE PMTS Amzn.com/bill WA",
+            amount_text="-38.94",
+        ),
+        ActivityRow(
+            section=ActivitySection.PAYMENTS_AND_OTHER_CREDITS,
+            date_text="07/27",
+            description="THE HOME DEPOT #6860 SUGARLAND TX",
+            amount_text="-60.97",
+        ),
+        ActivityRow(
+            section=ActivitySection.PURCHASE,
+            date_text="07/04",
+            description="SAMPLE PURCHASE",
+            amount_text="20.68",
+        ),
+    )
+
+
 def test_parse_foreign_currency_purchase_continuation() -> None:
     rows = parse_activity_rows(
         make_statement_text(
@@ -398,3 +443,34 @@ def test_total_interest_summary_ends_activity_section() -> None:
 
     assert len(rows) == 1
     assert rows[0].description == "SAMPLE MERCHANT"
+
+
+def test_parse_interest_charge_row() -> None:
+    rows = parse_activity_rows(
+        make_statement_text(
+            "\n".join(  # noqa: FLY002
+                (
+                    "PAYMENTS AND OTHER CREDITS",
+                    "04/27 Payment Thank You-Mobile -421.20",
+                    "INTEREST CHARGED",
+                    "05/03 PURCHASE INTEREST CHARGE 5.22",
+                    "TOTAL INTEREST FOR THIS PERIOD $5.22",
+                )
+            )
+        )
+    )
+
+    assert rows == (
+        ActivityRow(
+            section=ActivitySection.PAYMENTS_AND_OTHER_CREDITS,
+            date_text="04/27",
+            description="Payment Thank You-Mobile",
+            amount_text="-421.20",
+        ),
+        ActivityRow(
+            section=ActivitySection.INTEREST_CHARGED,
+            date_text="05/03",
+            description="PURCHASE INTEREST CHARGE",
+            amount_text="5.22",
+        ),
+    )

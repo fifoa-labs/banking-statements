@@ -83,6 +83,8 @@ def test_processor_parses_statement_identity() -> None:
             (
                 "www.chase.com/cardhelp",
                 "Account Number: XXXX XXXX XXXX 9062",
+                "Previous Balance $0.00",
+                "New Balance $0.00",
                 "Opening/Closing Date 03/12/26 - 04/11/26",
                 "Date of",
                 "Transaction Merchant Name or Transaction Description $ Amount",  # noqa: E501
@@ -104,6 +106,8 @@ def test_processor_parses_statement_identity() -> None:
     assert statement.account.last4 == "9062"
     assert statement.period.start == date(2026, 3, 12)
     assert statement.period.end == date(2026, 4, 11)
+    assert statement.balances.opening_balance == Decimal("0.00")
+    assert statement.balances.closing_balance == Decimal("0.00")
     assert statement.transactions == ()
 
 
@@ -120,6 +124,8 @@ def test_processor_parses_statement_identity_and_transactions() -> None:
             (
                 "www.chase.com/cardhelp",
                 "Account Number: XXXX XXXX XXXX 9062",
+                "Previous Balance $0.00",
+                "New Balance $8.25",
                 "Opening/Closing Date 03/12/26 - 04/11/26",
                 "Date of",
                 "Transaction Merchant Name or Transaction Description $ Amount",  # noqa: E501
@@ -144,6 +150,8 @@ def test_processor_parses_statement_identity_and_transactions() -> None:
     assert statement.account.last4 == "9062"
     assert statement.period.start == date(2026, 3, 12)
     assert statement.period.end == date(2026, 4, 11)
+    assert statement.balances.opening_balance == Decimal("0.00")
+    assert statement.balances.closing_balance == Decimal("8.25")
 
     assert len(statement.transactions) == 1
 

@@ -74,9 +74,39 @@ def test_parse_fee_transaction() -> None:
     assert transaction.description == "ANNUAL MEMBERSHIP FEE"
 
 
+def test_parse_payment_and_credit_transaction() -> None:
+    transactions = parse_activity_transactions(
+        (
+            ActivityRow(
+                section=ActivitySection.PAYMENTS_AND_OTHER_CREDITS,
+                date_text="07/14",
+                description="Payment Thank You-Mobile",
+                amount_text="-130.92",
+            ),
+        ),
+        period=StatementPeriod(
+            start=date(2026, 7, 4),
+            end=date(2026, 8, 3),
+        ),
+    )
+
+    transaction = transactions[0]
+
+    assert transaction.date == date(2026, 7, 14)
+    assert transaction.amount == Decimal("130.92")
+    assert transaction.direction is TransactionDirection.CREDIT
+    assert transaction.description == "Payment Thank You-Mobile"
+
+
 def test_parse_multiple_transactions_preserves_order() -> None:
     transactions = parse_activity_transactions(
         (
+            ActivityRow(
+                section=ActivitySection.PAYMENTS_AND_OTHER_CREDITS,
+                date_text="06/10",
+                description="PAYMENT",
+                amount_text="-50.00",
+            ),
             ActivityRow(
                 section=ActivitySection.PURCHASE,
                 date_text="06/17",
@@ -97,8 +127,14 @@ def test_parse_multiple_transactions_preserves_order() -> None:
     )
 
     assert [transaction.description for transaction in transactions] == [
+        "PAYMENT",
         "FIRST MERCHANT",
         "ANNUAL MEMBERSHIP FEE",
+    ]
+    assert [transaction.direction for transaction in transactions] == [
+        TransactionDirection.CREDIT,
+        TransactionDirection.DEBIT,
+        TransactionDirection.DEBIT,
     ]
 
 
@@ -260,3 +296,27 @@ def test_transaction_date_rejects_ambiguous_year() -> None:
                 end=date(2027, 12, 31),
             ),
         )
+
+
+def test_parse_interest_charge_transaction() -> None:
+    transactions = parse_activity_transactions(
+        (
+            ActivityRow(
+                section=ActivitySection.INTEREST_CHARGED,
+                date_text="05/03",
+                description="PURCHASE INTEREST CHARGE",
+                amount_text="5.22",
+            ),
+        ),
+        period=StatementPeriod(
+            start=date(2026, 4, 4),
+            end=date(2026, 5, 3),
+        ),
+    )
+
+    transaction = transactions[0]
+
+    assert transaction.date == date(2026, 5, 3)
+    assert transaction.amount == Decimal("5.22")
+    assert transaction.direction is TransactionDirection.DEBIT
+    assert transaction.description == "PURCHASE INTEREST CHARGE"

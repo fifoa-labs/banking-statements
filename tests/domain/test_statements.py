@@ -7,12 +7,14 @@ Tests for normalized banking statement models.
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal
 from pathlib import Path
 
 from banking_statements.domain import (
     AccountIdentity,
     AccountType,
     ParsedStatement,
+    StatementBalanceSummary,
     StatementPeriod,
     StatementSource,
 )
@@ -36,6 +38,16 @@ def test_account_types_are_stable_strings() -> None:
     assert AccountType.CREDIT_CARD.value == "credit_card"
 
 
+def test_statement_balance_summary_preserves_reported_values() -> None:
+    balances = StatementBalanceSummary(
+        opening_balance=Decimal("-10.16"),
+        closing_balance=Decimal("70.56"),
+    )
+
+    assert balances.opening_balance == Decimal("-10.16")
+    assert balances.closing_balance == Decimal("70.56")
+
+
 def test_parsed_statement_defaults_to_no_transactions() -> None:
     source = StatementSource(
         path=Path("statement.pdf"),
@@ -50,6 +62,10 @@ def test_parsed_statement_defaults_to_no_transactions() -> None:
         start=date(2026, 7, 1),
         end=date(2026, 7, 31),
     )
+    balances = StatementBalanceSummary(
+        opening_balance=Decimal("100.00"),
+        closing_balance=Decimal("125.00"),
+    )
 
     statement = ParsedStatement(
         source=source,
@@ -57,6 +73,7 @@ def test_parsed_statement_defaults_to_no_transactions() -> None:
         account=account,
         processor="sample.monthly",
         period=period,
+        balances=balances,
     )
 
     assert statement.source is source
@@ -64,4 +81,5 @@ def test_parsed_statement_defaults_to_no_transactions() -> None:
     assert statement.account is account
     assert statement.processor == "sample.monthly"
     assert statement.period is period
+    assert statement.balances is balances
     assert statement.transactions == ()

@@ -15,13 +15,6 @@ if TYPE_CHECKING:
     from banking_statements.text import StatementText
 
 
-class ActivitySection(StrEnum):
-    """Supported Chase credit-card activity sections."""
-
-    PURCHASE = "purchase"
-    FEES_CHARGED = "fees_charged"
-
-
 @dataclass(frozen=True, slots=True)
 class ActivityRow:
     """One reconstructed Chase credit-card activity row."""
@@ -33,10 +26,19 @@ class ActivityRow:
     continuation_lines: tuple[str, ...] = ()
 
 
+class ActivitySection(StrEnum):
+    """Supported Chase credit-card activity sections."""
+
+    PAYMENTS_AND_OTHER_CREDITS = "payments_and_other_credits"
+    PURCHASE = "purchase"
+    FEES_CHARGED = "fees_charged"
+    INTEREST_CHARGED = "interest_charged"
+
+
 _TRANSACTION_PATTERN = re.compile(
     r"^(?P<date>\d{2}/\d{2})\s+"
     r"(?P<description>.+?)\s+"
-    r"(?P<amount>(?:\d[\d,]*\.\d{2}|\.\d{2}))$",
+    r"(?P<amount>-?(?:\d[\d,]*\.\d{2}|\.\d{2}))$",
 )
 
 _FOREIGN_CURRENCY_LABEL_PATTERN = re.compile(
@@ -52,8 +54,10 @@ _YEAR_TO_DATE_PATTERN = re.compile(
 )
 
 _SECTION_MARKERS = {
+    "PAYMENTS AND OTHER CREDITS": ActivitySection.PAYMENTS_AND_OTHER_CREDITS,
     "PURCHASE": ActivitySection.PURCHASE,
     "FEES CHARGED": ActivitySection.FEES_CHARGED,
+    "INTEREST CHARGED": ActivitySection.INTEREST_CHARGED,
 }
 
 
@@ -64,6 +68,7 @@ def _is_stop_marker(line: str) -> bool:
             "Total fees charged in ",
             "Total interest charged in ",
             "TOTAL FEES FOR THIS PERIOD",
+            "TOTAL INTEREST FOR THIS PERIOD",
         )
     )
 

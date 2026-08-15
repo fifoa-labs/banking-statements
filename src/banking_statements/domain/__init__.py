@@ -12,6 +12,7 @@ from .statements import (
     AccountIdentity,
     AccountType,
     ParsedStatement,
+    StatementBalanceSummary,
     StatementPeriod,
 )
 from .transactions import TransactionDirection, TransactionEvent
@@ -21,6 +22,7 @@ __all__ = [
     "AccountType",
     "ParsedStatement",
     "SourceEvidence",
+    "StatementBalanceSummary",
     "StatementPeriod",
     "StatementSource",
     "TransactionDirection",

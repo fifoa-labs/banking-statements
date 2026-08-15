@@ -7,6 +7,7 @@ Tests for deterministic processor selection.
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal
 
 import pytest
 
@@ -14,6 +15,7 @@ from banking_statements.domain import (
     AccountIdentity,
     AccountType,
     ParsedStatement,
+    StatementBalanceSummary,
     StatementPeriod,
     StatementSource,
 )
@@ -61,6 +63,10 @@ class FakeProcessor:
             period=StatementPeriod(
                 start=date(2026, 1, 1),
                 end=date(2026, 1, 31),
+            ),
+            balances=StatementBalanceSummary(
+                opening_balance=Decimal("0.00"),
+                closing_balance=Decimal("0.00"),
             ),
         )
 

@@ -20,6 +20,7 @@ from .activity import (
     parse_activity_transactions,
 )
 from .identity import parse_identity
+from .summary import parse_balance_summary
 
 if TYPE_CHECKING:
     from banking_statements.text import StatementText
@@ -73,6 +74,7 @@ class ChaseCreditCardProcessor:
         )
 
         activity_rows = parse_activity_rows(text)
+        balances = parse_balance_summary(text)
         transactions = parse_activity_transactions(
             activity_rows,
             period=period,
@@ -84,5 +86,6 @@ class ChaseCreditCardProcessor:
             account=identity.account,
             processor=self.name,
             period=period,
+            balances=balances,
             transactions=transactions,
         )

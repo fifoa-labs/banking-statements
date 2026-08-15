@@ -2,7 +2,69 @@
 scripts/archive_smoke.py
 
 Run private banking statement PDFs through the supported processing pipeline.
-"""
+
+Examples:
+
+    Run the full Chase credit-card archive and stop on the first failure:
+
+        uv run python -m scripts.archive_smoke \
+            private-data/statements/chase/credit-card
+
+    Run one statement:
+
+        uv run python -m scripts.archive_smoke \
+            private-data/statements/chase/credit-card/20260803-statements-7244-.pdf
+
+    Run one statement and print normalized transactions:
+
+        uv run python -m scripts.archive_smoke \
+            private-data/statements/chase/credit-card/20260803-statements-7244-.pdf \
+            --show-transactions
+
+    Process only the first 10 statements:
+
+        uv run python -m scripts.archive_smoke \
+            private-data/statements/chase/credit-card \
+            --limit 10
+
+    Continue through parser or reconciliation failures:
+
+        uv run python -m scripts.archive_smoke \
+            private-data/statements/chase/credit-card \
+            --continue-on-error
+
+    Show tracebacks for parser failures:
+
+        uv run python -m scripts.archive_smoke \
+            private-data/statements/chase/credit-card \
+            --traceback
+
+    Allow reconciliation mismatches without failing the smoke run:
+
+        uv run python -m scripts.archive_smoke \
+            private-data/statements/chase/credit-card \
+            --allow-reconciliation-failures
+
+    Inspect all statements while allowing reconciliation mismatches:
+
+        uv run python -m scripts.archive_smoke \
+            private-data/statements/chase/credit-card \
+            --continue-on-error \
+            --allow-reconciliation-failures
+
+    Inspect all statements, allow reconciliation mismatches, and print every
+    normalized transaction:
+
+        uv run python -m scripts.archive_smoke \
+            private-data/statements/chase/credit-card \
+            --continue-on-error \
+            --allow-reconciliation-failures \
+            --show-transactions
+
+By default, both parsing failures and reconciliation mismatches cause the smoke
+run to fail. Reconciliation remains diagnostic only in the library itself;
+the strict behavior belongs to this development smoke tool.
+"""  # noqa: E501
 
 from __future__ import annotations
 
@@ -22,12 +84,14 @@ from banking_statements.processors.chase.credit_card.activity import (
     parse_activity_rows,
 )
 from banking_statements.processors.detection import InstitutionDetector
+from banking_statements.reconciliation import reconcile_statement
 from banking_statements.text import PdfStatementTextReader
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from banking_statements.domain import ParsedStatement
+    from banking_statements.reconciliation import StatementReconciliation
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -56,6 +120,19 @@ def build_parser() -> argparse.ArgumentParser:
         "--traceback",
         action="store_true",
         help="Show Python tracebacks for failures.",
+    )
+    parser.add_argument(
+        "--show-transactions",
+        action="store_true",
+        help="Print normalized transactions for each parsed statement.",
+    )
+    parser.add_argument(
+        "--allow-reconciliation-failures",
+        action="store_true",
+        help=(
+            "Report reconciliation mismatches without treating them "
+            "as smoke failures."
+        ),
     )
     return parser
 
@@ -110,8 +187,10 @@ def run_archive_smoke(
     *,
     continue_on_error: bool,
     show_traceback: bool,
+    show_transactions: bool,
+    allow_reconciliation_failures: bool,
 ) -> int:
-    """Parse statements and return the number of failures."""
+    """Parse statements and return the number of smoke failures."""
     reader = PdfStatementTextReader()
     detector = build_institution_detector()
     registry = build_processor_registry()
@@ -140,6 +219,7 @@ def run_archive_smoke(
                 text,
             )
             activity_rows = parse_activity_rows(text)
+            reconciliation = reconcile_statement(statement)
         except Exception as exc:  # noqa: BLE001
             failures += 1
 
@@ -156,27 +236,45 @@ def run_archive_smoke(
 
             continue
 
+        if not reconciliation.reconciled and not allow_reconciliation_failures:
+            failures += 1
+
+            _print_failure(
+                label,
+                path,
+                statement=statement,
+                reconciliation=reconciliation,
+                page_count=len(text.pages),
+                activity_row_count=len(activity_rows),
+                show_transactions=show_transactions,
+            )
+
+            if not continue_on_error:
+                break
+
+            continue
+
         _print_success(
             label,
             path,
             statement=statement,
+            reconciliation=reconciliation,
             page_count=len(text.pages),
             activity_row_count=len(activity_rows),
+            show_transactions=show_transactions,
+            reconciliation_is_warning=allow_reconciliation_failures,
         )
 
     return failures
 
 
-def _print_success(
-    label: str,
-    path: Path,
+def _print_statement_details(
     *,
     statement: ParsedStatement,
     page_count: int,
     activity_row_count: int,
 ) -> None:
-    """Print a concise normalized statement summary."""
-    print(f"{label} PASS {path.name}")  # noqa: T201
+    """Print normalized statement details shared by PASS and FAIL output."""
     print(  # noqa: T201
         "         "
         f"institution={statement.institution} "
@@ -193,9 +291,91 @@ def _print_success(
     )
     print(  # noqa: T201
         "         "
+        f"opening_balance={statement.balances.opening_balance} "
+        f"closing_balance={statement.balances.closing_balance}",
+    )
+    print(  # noqa: T201
+        "         "
         f"activity_rows={activity_row_count} "
         f"transactions={len(statement.transactions)}",
     )
+
+
+def _print_transactions(
+    statement: ParsedStatement,
+) -> None:
+    """Print normalized transactions from a parsed statement."""
+    for transaction in statement.transactions:
+        print(  # noqa: T201
+            "         "
+            f"{transaction.date.isoformat()} "
+            f"{transaction.direction.value} "
+            f"{transaction.amount} "
+            f"{transaction.description}",
+        )
+
+
+def _print_success(  # noqa: PLR0913
+    label: str,
+    path: Path,
+    *,
+    statement: ParsedStatement,
+    reconciliation: StatementReconciliation,
+    page_count: int,
+    activity_row_count: int,
+    show_transactions: bool,
+    reconciliation_is_warning: bool,
+) -> None:
+    """Print a successful normalized statement summary."""
+    print(f"{label} PASS {path.name}")  # noqa: T201
+
+    _print_statement_details(
+        statement=statement,
+        page_count=page_count,
+        activity_row_count=activity_row_count,
+    )
+
+    reconciliation_status = (
+        "WARN"
+        if reconciliation_is_warning and not reconciliation.reconciled
+        else "PASS"
+    )
+
+    print(  # noqa: T201
+        "         "
+        f"reconciliation={reconciliation_status} "
+        f"difference={reconciliation.difference}",
+    )
+
+    if show_transactions:
+        _print_transactions(statement)
+
+
+def _print_failure(  # noqa: PLR0913
+    label: str,
+    path: Path,
+    *,
+    statement: ParsedStatement,
+    reconciliation: StatementReconciliation,
+    page_count: int,
+    activity_row_count: int,
+    show_transactions: bool,
+) -> None:
+    """Print a reconciliation failure for an otherwise parsed statement."""
+    print(f"{label} FAIL {path.name}")  # noqa: T201
+
+    _print_statement_details(
+        statement=statement,
+        page_count=page_count,
+        activity_row_count=activity_row_count,
+    )
+
+    print(  # noqa: T201
+        f"         reconciliation=FAIL difference={reconciliation.difference}",
+    )
+
+    if show_transactions:
+        _print_transactions(statement)
 
 
 def main() -> None:
@@ -223,6 +403,8 @@ def main() -> None:
         statements,
         continue_on_error=args.continue_on_error,
         show_traceback=args.traceback,
+        show_transactions=args.show_transactions,
+        allow_reconciliation_failures=args.allow_reconciliation_failures,
     )
 
     if failures:

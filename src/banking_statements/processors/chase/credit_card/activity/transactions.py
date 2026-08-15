@@ -17,6 +17,8 @@ from banking_statements.domain import (
     to_decimal,
 )
 
+from .rows import ActivitySection
+
 if TYPE_CHECKING:
     from .rows import ActivityRow
 
@@ -43,7 +45,7 @@ def _resolve_transaction_date(
 
     for year in range(
         period.start.year,
-        period.end.year + 2,
+        period.end.year + 1,
     ):
         try:
             candidates.append(
@@ -90,6 +92,16 @@ def _resolve_transaction_date(
     return nearest[0]
 
 
+def _transaction_direction(
+    section: ActivitySection,
+) -> TransactionDirection:
+    """Return the economic direction for a Chase activity section."""
+    if section is ActivitySection.PAYMENTS_AND_OTHER_CREDITS:
+        return TransactionDirection.CREDIT
+
+    return TransactionDirection.DEBIT
+
+
 def parse_activity_transactions(
     rows: tuple[ActivityRow, ...],
     *,
@@ -102,8 +114,8 @@ def parse_activity_transactions(
                 row.date_text,
                 period,
             ),
-            amount=to_decimal(row.amount_text),
-            direction=TransactionDirection.DEBIT,
+            amount=abs(to_decimal(row.amount_text)),
+            direction=_transaction_direction(row.section),
             description=row.description,
         )
         for row in rows

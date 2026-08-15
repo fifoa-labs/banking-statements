@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from datetime import date
+    from decimal import Decimal
 
     from .evidence import StatementSource
     from .transactions import TransactionEvent
@@ -43,6 +44,14 @@ class StatementPeriod:
 
 
 @dataclass(frozen=True, slots=True)
+class StatementBalanceSummary:
+    """Balances reported by a banking statement."""
+
+    opening_balance: Decimal
+    closing_balance: Decimal
+
+
+@dataclass(frozen=True, slots=True)
 class ParsedStatement:
     """Normalized representation of a parsed banking statement."""
 
@@ -51,4 +60,5 @@ class ParsedStatement:
     account: AccountIdentity
     processor: str
     period: StatementPeriod
+    balances: StatementBalanceSummary
     transactions: tuple[TransactionEvent, ...] = ()

@@ -20,6 +20,7 @@ from banking_statements.domain import to_decimal
         (12, Decimal("12")),
         ("12.34", Decimal("12.34")),
         ("$12.34", Decimal("12.34")),
+        ("-$12.34", Decimal("-12.34")),
         ("1,234.56", Decimal("1234.56")),
         ("(12.34)", Decimal("-12.34")),
         ("($12.34)", Decimal("-12.34")),
