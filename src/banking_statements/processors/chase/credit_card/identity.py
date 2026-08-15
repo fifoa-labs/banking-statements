@@ -42,7 +42,7 @@ _UNLABELED_ACCOUNT_PATTERN = re.compile(
 )
 
 _PERIOD_PATTERN = re.compile(
-    r"pening/Closing Date\s+"
+    r"O`?pening/Closing Date\s+"
     r"(?P<start>\d{2}/\d{2}/\d{2})\s*-\s*"
     r"(?P<end>\d{2}/\d{2}/\d{2})",
 )

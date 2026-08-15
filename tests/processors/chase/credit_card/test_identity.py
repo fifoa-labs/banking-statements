@@ -35,7 +35,7 @@ def test_parse_identity() -> None:
             "\n".join(  # noqa: FLY002
                 (
                     "Account Number: XXXX XXXX XXXX 9062",
-                    "pening/Closing Date 03/12/26 - 04/11/26",
+                    "Opening/Closing Date 03/12/26 - 04/11/26",
                     "Statement Date: 04/11/26",
                 )
             )
@@ -50,13 +50,34 @@ def test_parse_identity() -> None:
     assert identity.statement_date == date(2026, 4, 11)
 
 
+def test_parse_identity_accepts_mangled_opening_closing_marker() -> None:
+    identity = parse_identity(
+        make_statement_text(
+            "\n".join(  # noqa: FLY002
+                (
+                    "Account Number: 4266 8415 1445 9062",
+                    "O`pening/Closing Date 12/12/20 - 01/11/21",
+                    "Statement Date: 01/11/21",
+                )
+            )
+        )
+    )
+
+    assert identity.account.account_type is AccountType.CREDIT_CARD
+    assert identity.account.display_number == "4266 8415 1445 9062"
+    assert identity.account.last4 == "9062"
+    assert identity.statement_start == date(2020, 12, 12)
+    assert identity.statement_end == date(2021, 1, 11)
+    assert identity.statement_date == date(2021, 1, 11)
+
+
 def test_parse_identity_accepts_lowercase_account_number_marker() -> None:
     identity = parse_identity(
         make_statement_text(
             "\n".join(  # noqa: FLY002
                 (
                     "Account number: XXXX XXXX XXXX 7001",
-                    "pening/Closing Date 12/10/24 - 01/09/25",
+                    "Opening/Closing Date 12/10/24 - 01/09/25",
                     "Statement Date: 01/09/25",
                 )
             )
@@ -80,7 +101,7 @@ def test_parse_identity_requires_account_number() -> None:
             make_statement_text(
                 "\n".join(  # noqa: FLY002
                     (
-                        "pening/Closing Date 03/12/26 - 04/11/26",
+                        "Opening/Closing Date 03/12/26 - 04/11/26",
                         "Statement Date: 04/11/26",
                     )
                 )
@@ -115,7 +136,7 @@ def test_parse_identity_requires_statement_date() -> None:
                 "\n".join(  # noqa: FLY002
                     (
                         "Account Number: XXXX XXXX XXXX 9062",
-                        "pening/Closing Date 03/12/26 - 04/11/26",
+                        "Opening/Closing Date 03/12/26 - 04/11/26",
                     )
                 )
             )
@@ -132,7 +153,7 @@ def test_parse_identity_requires_matching_closing_date() -> None:
                 "\n".join(  # noqa: FLY002
                     (
                         "Account Number: XXXX XXXX XXXX 9062",
-                        "pening/Closing Date 03/12/26 - 04/11/26",
+                        "Opening/Closing Date 03/12/26 - 04/11/26",
                         "Statement Date: 04/12/26",
                     )
                 )
@@ -146,7 +167,7 @@ def test_parse_identity_accepts_unmasked_account_number() -> None:
             "\n".join(  # noqa: FLY002
                 (
                     "Account Number: 4147 2024 9352 7244",
-                    "pening/Closing Date 12/04/23 - 01/03/24",
+                    "Opening/Closing Date 12/04/23 - 01/03/24",
                     "Statement Date: 01/03/24",
                 )
             )
