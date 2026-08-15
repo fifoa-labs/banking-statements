@@ -65,7 +65,7 @@ def test_processor_rejects_unsupported_structure() -> None:
     assert match.reason == ("Required Chase checking markers were not found.")
 
 
-def test_processor_parse_reaches_balance_summary_boundary() -> None:
+def test_processor_parse_reaches_transaction_boundary() -> None:
     processor = ChaseCheckingProcessor()
 
     source = StatementSource(
@@ -80,6 +80,8 @@ def test_processor_parse_reaches_balance_summary_boundary() -> None:
                 "JPMorgan Chase Bank, N.A.",
                 "Account Number: 000000000001234",
                 "CHECKING SUMMARY Chase Total Checking",
+                "Beginning Balance $1,234.56",
+                "Ending Balance $1,534.56",
                 "TRANSACTION DETAIL",
             )
         )
@@ -87,8 +89,6 @@ def test_processor_parse_reaches_balance_summary_boundary() -> None:
 
     with pytest.raises(
         NotImplementedError,
-        match=(
-            "Chase checking balance summary parsing is not implemented yet."  # noqa: RUF043
-        ),
+        match="Chase checking transaction parsing is not implemented yet.",  # noqa: RUF043
     ):
         processor.parse(source, text)

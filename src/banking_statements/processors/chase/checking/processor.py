@@ -19,6 +19,7 @@ from banking_statements.processors.chase.signatures import (
 )
 
 from .identity import parse_identity
+from .summary import parse_balance_summary
 
 if TYPE_CHECKING:
     from banking_statements.text import StatementText
@@ -62,5 +63,7 @@ class ChaseCheckingProcessor:
             end=identity.statement_end,
         )
 
-        msg = "Chase checking balance summary parsing is not implemented yet."
+        _balances = parse_balance_summary(text)
+
+        msg = "Chase checking transaction parsing is not implemented yet."
         raise NotImplementedError(msg)
