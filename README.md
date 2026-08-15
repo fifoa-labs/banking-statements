@@ -23,14 +23,11 @@ formats, ambiguous processor matches, malformed recognized data, and unknown
 statement behavior should fail explicitly rather than being silently ignored
 or guessed.
 
-Version `0.1.0` establishes the package foundation: typed statement and
-transaction domain objects, source-evidence models, page-aware text models,
-financial `Decimal` normalization, processor contracts, and deterministic
-processor selection.
-
-No specific bank statement format is claimed as supported in `0.1.0`.
-Institution-specific processors will be added only after they have been
-developed and validated against real statement evidence.
+Version `0.2.0` adds real Chase credit-card statement support on top of the
+generic package foundation introduced in `0.1.0`. The Chase credit-card
+processor has been developed against a broad private historical corpus spanning
+observed statement formats from 2019 through 2026. Public tests remain fully
+synthetic and contain no private financial data.
 
 The package intentionally focuses on answering:
 
@@ -46,58 +43,57 @@ layer, or Beancount-specific importer.
 
 ## Current Status
 
-`banking-statements` is currently in early development.
-
-The `0.1.0` release provides the generic architecture required to build strict,
-institution-specific bank statement processors without coupling the package to
-a single bank or statement layout.
-
-Current foundation:
+Current release:
 
 ```text
-banking-statements 0.1.0
-
-Python
-    3.11
-    3.12
-    3.13
-    3.14
-
-Domain
-    StatementSource
-    SourceEvidence
-    StatementPeriod
-    ParsedStatement
-    TransactionEvent
-    TransactionDirection
-
-Financial values
-    Decimal-based normalization
-
-Text
-    StatementPage
-    StatementText
-    StatementTextReader
-
-Processors
-    ProcessorMatch
-    StatementProcessor
-    ProcessorRegistry
-
-Validation
-    deterministic processor selection
-    explicit unsupported-statement failure
-    explicit ambiguous-processor failure
-
-Quality
-    Ruff
-    mypy strict
-    pytest
-    100% branch coverage
+banking-statements 0.2.0
 ```
 
-Institution-specific statement support will be documented only after a processor
-has been validated against a meaningful private historical corpus.
+Supported Python versions:
+
+```text
+Python 3.11
+Python 3.12
+Python 3.13
+Python 3.14
+```
+
+Current implemented statement support:
+
+```text
+Chase
+    credit cards
+        modern statement layouts
+        historical statement layouts
+        co-branded statement layouts
+        observed formats spanning 2019–2026
+```
+
+Current normalized domain includes:
+
+```text
+StatementSource
+SourceEvidence
+StatementPeriod
+StatementBalanceSummary
+ParsedStatement
+
+AccountType
+AccountIdentity
+
+TransactionEvent
+TransactionDirection
+```
+
+Current Chase credit-card capabilities include account identity, masked and
+unmasked account numbers, statement periods, opening and closing balances,
+purchases, payments, merchant credits, fees, interest charges, balance
+transfers, My Chase Loan activity, promotional adjustments, reversals,
+cross-year transaction dates, historical transaction-date references,
+foreign-currency continuation preservation, and statement reconciliation.
+
+Quality gates include Ruff, strict mypy, pytest, 100% branch coverage,
+distribution validation, typed-wheel validation, and clean-wheel installation.
 
 ## Installation
 
@@ -123,7 +119,8 @@ uv sync --dev
 
 ## Basic Usage
 
-The initial public package exposes generic domain and processor primitives.
+The package exposes generic domain primitives plus implemented statement
+processors. The current institution-specific milestone is Chase credit cards.
 
 ```python
 from datetime import date
@@ -155,7 +152,91 @@ transaction = TransactionEvent(
 )
 ```
 
-The package does not yet expose a default bank-specific parser in `0.1.0`.
+Chase credit-card statements are currently handled by the stable processor
+identifier `chase.credit_card.v1`.
+
+
+## Chase Credit Card Support
+
+`0.2.0` includes real Chase credit-card statement support through:
+
+```text
+chase.credit_card.v1
+```
+
+The processor supports compatible modern, historical, and co-branded Chase
+credit-card statement grammars observed in the private development corpus from
+2019 through 2026.
+
+The implementation intentionally tolerates only known PDF text-extraction
+artifacts demonstrated by real statements. Examples include variants such as `Opening/Closing Date` versus the extracted form
+`O\`pening/Closing Date`, and `New Balance` versus `N\`ew Balance`. Broad fuzzy matching and generic character de-duplication are
+intentionally avoided.
+
+Historical statements may expose full account numbers while newer statements
+may expose masked numbers. `AccountIdentity` preserves the display value stated
+by the source document and separately exposes the last four digits when
+available.
+
+### Statement balances
+
+Supported statements expose generic balance checkpoints:
+
+```python
+StatementBalanceSummary(
+    opening_balance=...,
+    closing_balance=...,
+)
+```
+
+These values are parsed as stated by the bank. They are not rewritten to force
+reconciliation.
+
+### Supported activity
+
+The Chase credit-card processor currently normalizes activity including:
+
+```text
+purchases
+payments
+merchant credits
+fees
+interest charges
+balance transfers
+My Chase Loan activity
+promotional adjustments
+reversals
+```
+
+Normalized amounts are positive magnitudes and `TransactionDirection` carries
+the economic direction.
+
+## Reconciliation
+
+Reconciliation is optional and separate from parsing.
+
+```python
+from banking_statements.reconciliation import reconcile_statement
+
+result = reconcile_statement(statement)
+```
+
+The reconciliation check compares:
+
+```text
+opening balance
++ parsed debits
+- parsed credits
+= expected closing balance
+```
+
+against the closing balance reported by the statement. The result includes the
+parsed debit and credit totals, expected closing balance, difference, and a
+`reconciled` boolean. A mismatch does not modify or reject the parsed statement.
+
+The private archive smoke tooling is stricter by default and treats a
+reconciliation mismatch as a smoke failure so incomplete or misdirected
+activity is surfaced during development.
 
 ## Financial Values
 
@@ -214,26 +295,28 @@ reconciliation layers.
 
 ## Architecture
 
-The intended processing pipeline is:
+The implemented processing pipeline is:
 
 ```text
 PDF
     ↓
-page-aware text extraction
+PdfStatementTextReader
+    ↓
+page-aware StatementText
     ↓
 institution detection
     ↓
 processor selection
     ↓
-statement structure
+identity and statement-balance parsing
     ↓
 logical transaction rows
     ↓
 focused economic parsing
     ↓
-normalized domain objects
+ParsedStatement
     ↓
-strict validation
+optional reconciliation
 ```
 
 The architecture separates document mechanics from normalized financial
@@ -380,23 +463,22 @@ This keeps layout reconstruction separate from transaction interpretation.
 
 ## Institution Support
 
-`banking-statements` is intended to support multiple U.S. banking institutions.
-
-Future processor families may include institutions such as:
+Current implemented support:
 
 ```text
-Bank of America
 Chase
-U.S. Bank
-Wells Fargo
-Capital One
-other U.S. banks
+    credit cards
 ```
 
-This list represents intended package scope, not current support.
+The current Chase credit-card processor has been validated against a broad
+private historical corpus covering observed statement formats from 2019 through
+2026.
 
-A bank or statement format should be listed as supported only after its
-processor has been implemented and validated against real statements.
+Future processor families may include Chase checking, Chase savings, U.S. Bank,
+Wells Fargo, Capital One, Bank of America, and other U.S. institutions.
+
+A bank or statement format is listed as supported only after its processor has
+been implemented and validated against real statement evidence.
 
 ## Private Statement Corpus
 
@@ -495,16 +577,36 @@ make smoke-archive \
     continue=1
 ```
 
-A future smoke-test PASS should mean:
+A strict smoke PASS means:
 
 ```text
 document extraction succeeded
 institution detection succeeded
 processor selection succeeded
-required statement structure was understood
-recognized financial rows were accounted for
-normalized output validated
-unsupported activity was not silently discarded
+statement identity parsed
+statement period parsed
+opening and closing balances parsed
+logical activity reconstructed
+transactions normalized
+debit/credit direction assigned
+statement reconciliation succeeded
+```
+
+Run a single statement and print normalized transactions:
+
+```bash
+uv run python -m scripts.archive_smoke \
+    private-data/statements/chase/credit-card/example.pdf \
+    --show-transactions
+```
+
+Allow reconciliation mismatches for investigation without turning them into
+smoke failures:
+
+```bash
+uv run python -m scripts.archive_smoke \
+    private-data/statements/chase/credit-card \
+    --allow-reconciliation-failures
 ```
 
 ## Development
@@ -703,6 +805,7 @@ statement normalization
 source evidence
 processor selection
 strict statement validation
+optional reconciliation
 typed Python domain objects
 ```
 
@@ -729,30 +832,26 @@ package without becoming responsibilities of the statement parser itself.
 
 ## Roadmap
 
-The next development phases are expected to be:
+Current milestone:
 
 ```text
-0.1.x
-    generic package foundation
-    page-aware PDF extraction
-    institution detection
-    statement inspection tooling
-    private archive smoke tooling
-
-first institution milestone
-    first real bank detector signature
-    first statement processor
-    statement identity parsing
-    statement-period parsing
-    logical transaction rows
+0.2.0
+    Chase credit-card statement support
+    historical format compatibility
+    account identity
+    opening and closing balances
     normalized transactions
-    real archive validation
+    statement reconciliation
+```
 
-later milestones
-    additional statement revisions
-    additional institutions
-    statement-level validation
-    possible reconciliation capabilities
+Expected next phases:
+
+```text
+Chase checking
+Chase savings
+additional institutions
+additional statement grammars
+additional reconciliation capabilities when supported by evidence
 ```
 
 The roadmap is evidence-driven.
