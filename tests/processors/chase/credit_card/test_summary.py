@@ -89,3 +89,19 @@ def test_parse_balance_summary_ignores_trailing_column_text() -> None:
 
     assert summary.opening_balance == Decimal("-95.90")
     assert summary.closing_balance == Decimal("-95.90")
+
+
+def test_parse_balance_summary_accepts_mangled_new_balance_marker() -> None:
+    summary = parse_balance_summary(
+        make_statement_text(
+            "\n".join(  # noqa: FLY002
+                (
+                    "Previous Balance $125.00",
+                    "N`ew Balance $87.40",
+                )
+            )
+        )
+    )
+
+    assert summary.opening_balance == Decimal("125.00")
+    assert summary.closing_balance == Decimal("87.40")

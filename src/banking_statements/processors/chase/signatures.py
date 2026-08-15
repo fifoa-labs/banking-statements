@@ -36,6 +36,14 @@ CHASE_CREDIT_CARD_SIGNATURES = (
             "pening/Closing Date",
         ),
     ),
+    InstitutionSignature(
+        institution="chase",
+        required_markers=(
+            "www.Chase.com/",
+            "Credit Card Statement",
+            "pening/Closing Date",
+        ),
+    ),
 )
 
 CHASE_SIGNATURES = (*CHASE_CREDIT_CARD_SIGNATURES,)
