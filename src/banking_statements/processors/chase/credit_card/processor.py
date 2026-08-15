@@ -15,6 +15,10 @@ from banking_statements.domain import (
 )
 from banking_statements.processors.base import ProcessorMatch
 
+from .activity import (
+    parse_activity_rows,
+    parse_activity_transactions,
+)
 from .identity import parse_identity
 
 if TYPE_CHECKING:
@@ -56,16 +60,25 @@ class ChaseCreditCardProcessor:
         source: StatementSource,
         text: StatementText,
     ) -> ParsedStatement:
-        """Parse Chase credit-card statement identity."""
+        """Parse a Chase credit-card statement."""
         identity = parse_identity(text)
+
+        period = StatementPeriod(
+            start=identity.statement_start,
+            end=identity.statement_end,
+        )
+
+        activity_rows = parse_activity_rows(text)
+        transactions = parse_activity_transactions(
+            activity_rows,
+            period=period,
+        )
 
         return ParsedStatement(
             source=source,
             institution="chase",
             account=identity.account,
             processor=self.name,
-            period=StatementPeriod(
-                start=identity.statement_start,
-                end=identity.statement_end,
-            ),
+            period=period,
+            transactions=transactions,
         )
