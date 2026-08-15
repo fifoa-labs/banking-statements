@@ -11,6 +11,8 @@ from datetime import date
 import pytest
 
 from banking_statements.domain import (
+    AccountIdentity,
+    AccountType,
     ParsedStatement,
     StatementPeriod,
     StatementSource,
@@ -50,6 +52,11 @@ class FakeProcessor:
         return ParsedStatement(
             source=source,
             institution="sample-bank",
+            account=AccountIdentity(
+                account_type=AccountType.CREDIT_CARD,
+                display_number="XXXX XXXX XXXX 1234",
+                last4="1234",
+            ),
             processor=self.name,
             period=StatementPeriod(
                 start=date(2026, 1, 1),
