@@ -8,16 +8,20 @@ from __future__ import annotations
 
 from .checking import ChaseCheckingProcessor
 from .credit_card import ChaseCreditCardProcessor
+from .heloc import ChaseHelocProcessor
 from .signatures import (
     CHASE_CHECKING_SIGNATURES,
     CHASE_CREDIT_CARD_SIGNATURES,
+    CHASE_HELOC_SIGNATURES,
     CHASE_SIGNATURES,
 )
 
 __all__ = [
     "CHASE_CHECKING_SIGNATURES",
     "CHASE_CREDIT_CARD_SIGNATURES",
+    "CHASE_HELOC_SIGNATURES",
     "CHASE_SIGNATURES",
     "ChaseCheckingProcessor",
     "ChaseCreditCardProcessor",
+    "ChaseHelocProcessor",
 ]

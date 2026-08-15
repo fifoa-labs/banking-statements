@@ -23,12 +23,12 @@ formats, ambiguous processor matches, malformed recognized data, and unknown
 statement behavior should fail explicitly rather than being silently ignored
 or guessed.
 
-Version `0.2.0` introduced real Chase credit-card statement support on top of
-the generic package foundation established in `0.1.0`. Current development also
-includes Chase checking statement support through an isolated checking
-processor. Both processor families have been developed against private
-historical corpora spanning observed statement formats from 2019 through 2026.
-Public tests remain fully synthetic and contain no private financial data.
+Version `0.4.0` expands the package into multi-institution statement support.
+Implemented processors now cover Chase credit cards, Chase checking, Chase
+home-equity lines of credit, and multiple Wells Fargo consumer and business
+statement families. The processors have been developed against private
+historical corpora while public tests remain fully synthetic and contain no
+private financial data.
 
 The package intentionally focuses on answering:
 
@@ -47,7 +47,7 @@ layer, or Beancount-specific importer.
 Current release:
 
 ```text
-banking-statements 0.2.0
+banking-statements 0.4.0
 ```
 
 Supported Python versions:
@@ -74,6 +74,24 @@ Chase
         multi-page transaction detail
         wrapped transaction descriptions
         observed formats spanning 2019–2026
+
+    home-equity line of credit
+        Chase Home Equity Line of Credit statements
+        advances and initial funding
+        payments and additional-principal payments
+        fee assessments and fee payments
+        finance-charge accrual
+        funds-applied and funds-reversed allocation behavior
+        payoff and credit-balance statements
+        zero-activity statements
+        observed formats spanning 2020–2022
+
+Wells Fargo
+    checking
+    credit card
+    business checking
+    business credit card
+    business line of credit
 ```
 
 Current normalized domain includes:
@@ -104,11 +122,31 @@ periods, beginning and ending balances, signed transaction-table parsing,
 multi-page transaction detail, wrapped and continued descriptions, deposits,
 withdrawals, ACH activity, card payments, transfers, fees, credits, cross-year
 transaction dates, debit/credit normalization, and statement reconciliation.
-The private checking corpus currently validates 182 of 182 statements with
-strict reconciliation and zero difference.
+
+Current Chase HELOC capabilities include account identity, statement periods,
+opening and closing debt balances, advances, initial funding, additional
+principal payments, regular payments, fee assessments and fee payments,
+finance-charge accrual, funds-applied and funds-reversed allocation behavior,
+payoff cycles, negative credit balances, zero-activity cycles, and strict
+line-of-credit reconciliation. The private Chase HELOC corpus currently
+validates 28 of 28 monthly statements with zero reconciliation difference.
+
+Current Wells Fargo support includes consumer checking and credit-card
+statements plus business checking, business credit-card, and business
+line-of-credit statement families. The Wells Fargo BusinessLine processor uses
+layout-aware PDF evidence where column position carries transaction direction.
+
+The complete private statement archive currently validates:
+
+```text
+1001 / 1001 PASS
+reconciliation=PASS
+difference=0.00
+```
 
 Quality gates include Ruff, strict mypy, pytest, 100% branch coverage,
-distribution validation, typed-wheel validation, and clean-wheel installation.
+distribution validation, typed-wheel validation, clean-wheel installation,
+and full private-archive smoke validation.
 
 ## Installation
 
@@ -135,7 +173,7 @@ uv sync --dev
 ## Basic Usage
 
 The package exposes generic domain primitives plus implemented statement
-processors. Current Chase processor families cover credit cards and checking.
+processors for supported Chase and Wells Fargo statement families.
 
 ```python
 from datetime import date
@@ -174,6 +212,12 @@ Chase checking statements are handled by:
 
 ```text
 chase.checking.v1
+```
+
+Chase home-equity line-of-credit statements are handled by:
+
+```text
+chase.heloc.v1
 ```
 
 
@@ -283,6 +327,44 @@ The running-balance column remains parser evidence from the source statement;
 the normalized public transaction model intentionally stays focused on the
 transaction date, amount, direction, description, and optional source evidence.
 
+
+## Chase HELOC Support
+
+Chase home-equity line-of-credit statements are handled through:
+
+```text
+chase.heloc.v1
+```
+
+The processor has been validated against a private chronological corpus of 28
+monthly statements spanning observed formats from 2020 through 2022:
+
+```text
+28 / 28 PASS
+reconciliation=PASS
+difference=0.00
+```
+
+The processor normalizes debt-increasing activity such as initial funding,
+balance advances, assessed fees, and gross finance charges as debits.
+Debt-reducing activity such as additional-principal payments, fee payments, and
+funds actually applied to the account is normalized as credits.
+
+Chase HELOC statements expose payment-allocation rows that are not always
+independent economic transactions. The processor distinguishes payment
+allocation detail, funds applied, and funds reversed so statement bookkeeping is
+not double-counted.
+
+Finance charges are parsed from the statement's finance-charge calculation
+section rather than inferred from the closing summary alone. This matters when
+interest accrues and is paid within the same statement cycle, including payoff
+cycles where the closing summary may report no remaining interest even though
+finance charges accrued during the period.
+
+The processor also supports zero-activity statements and credit-balance
+statements where the reported balance is negative.
+
+
 ## Reconciliation
 
 Reconciliation is optional and separate from parsing.
@@ -295,7 +377,7 @@ result = reconcile_statement(statement)
 
 Reconciliation is account-type aware.
 
-For credit-card balances:
+For debt accounts such as credit cards and lines of credit:
 
 ```text
 opening balance
@@ -385,7 +467,7 @@ PDF
     ↓
 PdfStatementTextReader
     ↓
-page-aware StatementText
+page-aware, layout-aware StatementText
     ↓
 institution detection
     ↓
@@ -552,17 +634,24 @@ Current implemented support:
 Chase
     credit cards
     checking
+    home-equity line of credit
+
+Wells Fargo
+    checking
+    credit card
+    business checking
+    business credit card
+    business line of credit
 ```
 
-The Chase credit-card processor has been validated against a broad private
-historical corpus covering observed statement formats from 2019 through 2026.
+Chase credit-card and checking processors have been validated against broad
+private historical corpora covering observed statement formats from 2019
+through 2026. Chase HELOC support has been validated against 28 monthly
+statements covering observed formats from 2020 through 2022.
 
-The Chase checking processor has been validated against a private historical
-corpus of 182 statements covering observed formats from 2019 through 2026, with
-all 182 currently passing strict parsing and reconciliation.
-
-Future processor families may include Chase savings, U.S. Bank, Wells Fargo,
-Capital One, Bank of America, and other U.S. institutions.
+The complete private development archive currently contains 1001 supported
+statements, all of which pass extraction, detection, processor selection,
+parsing, normalization, and strict reconciliation with zero difference.
 
 A bank or statement format is listed as supported only after its processor has
 been implemented and validated against real statement evidence.
@@ -889,10 +978,10 @@ It aims to provide:
 ```text
 bank statement parsing
 statement normalization
-source evidence
+source and layout evidence
 processor selection
 strict statement validation
-optional reconciliation
+account-type-aware reconciliation
 typed Python domain objects
 ```
 
@@ -922,37 +1011,34 @@ package without becoming responsibilities of the statement parser itself.
 Current milestone:
 
 ```text
-0.2.0
-    Chase credit-card statement support
-    historical format compatibility
-    account identity
-    opening and closing balances
-    normalized transactions
-    statement reconciliation
-```
+0.4.0
+    multi-institution statement support
 
-Current development milestone:
+    Chase
+        credit card
+        checking
+        home-equity line of credit
 
-```text
-Chase checking
-    chase.checking.v1
-    account identity
-    statement periods
-    beginning and ending balances
-    multi-page transaction parsing
-    wrapped description reconstruction
-    debit/credit normalization
+    Wells Fargo
+        checking
+        credit card
+        business checking
+        business credit card
+        business line of credit
+
     account-type-aware reconciliation
-    182 / 182 private statements PASS
+    layout-aware PDF evidence
+    strict processor selection
+    1001 / 1001 private statements PASS
 ```
 
 Expected next phases:
 
 ```text
-Chase savings
+additional Chase account families when supported by evidence
 additional institutions
 additional statement grammars
-additional reconciliation capabilities when supported by evidence
+additional reconciliation capabilities when required by statement evidence
 ```
 
 The roadmap is evidence-driven.
