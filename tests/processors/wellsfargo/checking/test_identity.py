@@ -88,3 +88,54 @@ def test_parse_identity_handles_statement_period_activity_summary() -> None:
     assert identity.account.last4 == "7890"
     assert identity.statement_start == date(2020, 12, 12)
     assert identity.statement_end == date(2021, 1, 14)
+
+
+def test_parse_identity_uses_statement_end_and_beginning_balance_fallback() -> (  # noqa: E501
+    None
+):
+    identity = parse_identity(
+        make_statement_text(
+            "\n".join(  # noqa: FLY002
+                (
+                    "Wells Fargo Combined Statement of Accounts",
+                    "July 15, 2026 Page 1 of 7",
+                    "Wells Fargo Everyday Checking",
+                    (
+                        "Statement period activity summary "
+                        "Account number: 1234567890 (primary account)"
+                    ),
+                    "Beginning balance on 6/16 $7,475.78",
+                    "Ending balance on 7/15 $3,101.39",
+                )
+            )
+        )
+    )
+
+    assert identity.account.display_number == "1234567890"
+    assert identity.statement_start == date(2026, 6, 16)
+    assert identity.statement_end == date(2026, 7, 15)
+
+
+def test_parse_identity_resolves_fallback_start_date_across_year_boundary() -> (  # noqa: E501
+    None
+):
+    identity = parse_identity(
+        make_statement_text(
+            "\n".join(  # noqa: FLY002
+                (
+                    "Wells Fargo Combined Statement of Accounts",
+                    "January 15, 2026 Page 1 of 7",
+                    "Wells Fargo Everyday Checking",
+                    (
+                        "Statement period activity summary "
+                        "Account number: 1234567890"
+                    ),
+                    "Beginning balance on 12/16 $1,000.00",
+                    "Ending balance on 1/15 $2,000.00",
+                )
+            )
+        )
+    )
+
+    assert identity.statement_start == date(2025, 12, 16)
+    assert identity.statement_end == date(2026, 1, 15)

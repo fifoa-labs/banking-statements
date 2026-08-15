@@ -35,17 +35,82 @@ _ACCOUNT_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
-_PERIOD_PATTERN = re.compile(
+_FEE_PERIOD_PATTERN = re.compile(
     r"Fee period\s+"
     r"(?P<start>\d{1,2}/\d{1,2}/\d{4})"
     r"\s+-\s+"
     r"(?P<end>\d{1,2}/\d{1,2}/\d{4})",
 )
 
+_STATEMENT_END_PATTERN = re.compile(
+    r"(?P<end>[A-Z][a-z]+ \d{1,2}, \d{4})\s+Page\s+\d+\s+of\s+\d+",
+)
 
-def _parse_date(value: str) -> date:
-    """Parse a Wells Fargo checking statement date."""
+_BEGINNING_BALANCE_DATE_PATTERN = re.compile(
+    r"Beginning\s+b\s*alance\s+on\s+"
+    r"(?P<month>\d{1,2})/(?P<day>\d{1,2})",
+)
+
+
+def _parse_numeric_date(value: str) -> date:
+    """Parse a numeric Wells Fargo statement date."""
     return datetime.strptime(value, "%m/%d/%Y").date()  # noqa: DTZ007
+
+
+def _parse_named_date(value: str) -> date:
+    """Parse a named Wells Fargo statement date."""
+    return datetime.strptime(value, "%B %d, %Y").date()  # noqa: DTZ007
+
+
+def _resolve_start_date(
+    *,
+    month: int,
+    day: int,
+    statement_end: date,
+) -> date:
+    """Resolve an M/D start date relative to the statement ending date."""
+    year = statement_end.year
+
+    candidate = date(year, month, day)
+
+    if candidate > statement_end:
+        candidate = date(year - 1, month, day)
+
+    return candidate
+
+
+def _parse_statement_period(
+    text: StatementText,
+    *,
+    section: str,
+) -> tuple[date, date]:
+    """Parse the Wells Fargo checking statement period."""
+    fee_period_match = _FEE_PERIOD_PATTERN.search(section)
+
+    if fee_period_match is not None:
+        return (
+            _parse_numeric_date(fee_period_match.group("start")),
+            _parse_numeric_date(fee_period_match.group("end")),
+        )
+
+    statement_end_match = _STATEMENT_END_PATTERN.search(text.text)
+    beginning_match = _BEGINNING_BALANCE_DATE_PATTERN.search(section)
+
+    if statement_end_match is None or beginning_match is None:
+        msg = "Wells Fargo checking statement period was not found."
+        raise ValueError(msg)
+
+    statement_end = _parse_named_date(
+        statement_end_match.group("end"),
+    )
+
+    statement_start = _resolve_start_date(
+        month=int(beginning_match.group("month")),
+        day=int(beginning_match.group("day")),
+        statement_end=statement_end,
+    )
+
+    return statement_start, statement_end
 
 
 def parse_identity(text: StatementText) -> WellsFargoCheckingIdentity:
@@ -57,10 +122,10 @@ def parse_identity(text: StatementText) -> WellsFargoCheckingIdentity:
         msg = "Wells Fargo checking account number was not found."
         raise ValueError(msg)
 
-    period_match = _PERIOD_PATTERN.search(section)
-    if period_match is None:
-        msg = "Wells Fargo checking statement period was not found."
-        raise ValueError(msg)
+    statement_start, statement_end = _parse_statement_period(
+        text,
+        section=section,
+    )
 
     display_number = account_match.group("display")
 
@@ -70,6 +135,6 @@ def parse_identity(text: StatementText) -> WellsFargoCheckingIdentity:
             display_number=display_number,
             last4=display_number[-4:],
         ),
-        statement_start=_parse_date(period_match.group("start")),
-        statement_end=_parse_date(period_match.group("end")),
+        statement_start=statement_start,
+        statement_end=statement_end,
     )
