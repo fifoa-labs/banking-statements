@@ -1,7 +1,7 @@
 """
 src/banking_statements/text/pdf.py
 
-PDF-backed extraction of page-aware banking statement text.
+PDF-backed extraction of page-aware banking statement text and layout evidence.
 """
 
 from __future__ import annotations
@@ -12,20 +12,20 @@ import pdfplumber
 
 from banking_statements.exceptions import StatementSourceError
 
-from .models import StatementPage, StatementText
+from .models import StatementPage, StatementText, StatementWord
 
 if TYPE_CHECKING:
     from banking_statements.domain import StatementSource
 
 
 class PdfStatementTextReader:
-    """Extract page-aware text from banking statement PDFs."""
+    """Extract page-aware text and layout evidence from PDF statements."""
 
     def read(
         self,
         source: StatementSource,
     ) -> StatementText:
-        """Extract normalized text from a PDF statement source."""
+        """Extract normalized text and positioned words from a PDF source."""
         path = source.path
 
         try:
@@ -52,13 +52,25 @@ class PdfStatementTextReader:
         page_number: int,
         page: pdfplumber.page.Page,
     ) -> StatementPage:
-        """Extract text from one PDF page."""
+        """Extract text and positioned words from one PDF page."""
         text = page.extract_text()
 
         if text is None:
             text = ""
 
+        words = tuple(
+            StatementWord(
+                text=str(word["text"]),
+                x0=float(word["x0"]),
+                x1=float(word["x1"]),
+                top=float(word["top"]),
+                bottom=float(word["bottom"]),
+            )
+            for word in page.extract_words()
+        )
+
         return StatementPage(
             number=page_number,
             text=text,
+            words=words,
         )

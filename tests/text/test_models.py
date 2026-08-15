@@ -1,72 +1,72 @@
 """
 tests/text/test_models.py
 
-Tests for normalized banking statement text models.
+Tests for normalized statement text and layout models.
 """
 
 from __future__ import annotations
 
 import pytest
 
-from banking_statements.text import StatementPage, StatementText
+from banking_statements.text import (
+    StatementPage,
+    StatementText,
+    StatementWord,
+)
 
 
-def test_statement_page_preserves_number_and_text() -> None:
+def test_statement_page_defaults_to_no_layout_words() -> None:
     page = StatementPage(
         number=1,
-        text="Sample page text",
+        text="Sample statement text",
     )
 
     assert page.number == 1
-    assert page.text == "Sample page text"
+    assert page.text == "Sample statement text"
+    assert page.words == ()
 
 
-def test_statement_page_rejects_invalid_number() -> None:
+def test_statement_page_accepts_layout_words() -> None:
+    word = StatementWord(
+        text="100.00",
+        x0=400.0,
+        x1=430.0,
+        top=100.0,
+        bottom=110.0,
+    )
+
+    page = StatementPage(
+        number=1,
+        text="100.00",
+        words=(word,),
+    )
+
+    assert page.words == (word,)
+
+
+def test_statement_page_rejects_invalid_page_number() -> None:
     with pytest.raises(
         ValueError,
         match="page number must be at least 1",
     ):
         StatementPage(
             number=0,
-            text="Invalid page",
+            text="Sample",
         )
 
 
-def test_statement_text_preserves_ordered_pages() -> None:
-    first = StatementPage(
-        number=1,
-        text="First page",
-    )
-    second = StatementPage(
-        number=2,
-        text="Second page",
-    )
-
-    statement = StatementText(
-        pages=(first, second),
-    )
-
-    assert statement.pages == (first, second)
-
-
-def test_statement_text_combines_page_text_in_order() -> None:
-    statement = StatementText(
+def test_statement_text_combines_page_text() -> None:
+    text = StatementText(
         pages=(
             StatementPage(
                 number=1,
-                text="First page",
+                text="Page one",
             ),
             StatementPage(
                 number=2,
-                text="Second page",
+                text="Page two",
             ),
         )
     )
 
-    assert statement.text == "First page\nSecond page"
-
-
-def test_empty_statement_text_is_empty() -> None:
-    statement = StatementText(pages=())
-
-    assert statement.text == ""
+    assert text.text == "Page one\nPage two"

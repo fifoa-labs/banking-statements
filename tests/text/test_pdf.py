@@ -19,12 +19,22 @@ from banking_statements.text.pdf import PdfStatementTextReader
 class FakePage:
     """Minimal pdfplumber page used for extraction tests."""
 
-    def __init__(self, text: str | None) -> None:
+    def __init__(
+        self,
+        text: str | None,
+        *,
+        words: list[dict[str, object]] | None = None,
+    ) -> None:
         self._text = text
+        self._words = words or []
 
     def extract_text(self) -> str | None:
         """Return configured page text."""
         return self._text
+
+    def extract_words(self) -> list[dict[str, object]]:
+        """Return configured positioned words."""
+        return self._words
 
 
 class FakePdf:
@@ -40,7 +50,7 @@ class FakePdf:
         return None
 
 
-def test_pdf_reader_extracts_page_aware_text(
+def test_pdf_reader_extracts_page_aware_text_and_layout(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     source = StatementSource(
@@ -50,8 +60,30 @@ def test_pdf_reader_extracts_page_aware_text(
 
     fake_pdf = FakePdf(
         [
-            FakePage("First page"),
-            FakePage("Second page"),
+            FakePage(
+                "First page",
+                words=[
+                    {
+                        "text": "First",
+                        "x0": 10.0,
+                        "x1": 30.0,
+                        "top": 20.0,
+                        "bottom": 30.0,
+                    },
+                ],
+            ),
+            FakePage(
+                "Second page",
+                words=[
+                    {
+                        "text": "Second",
+                        "x0": 11.0,
+                        "x1": 40.0,
+                        "top": 21.0,
+                        "bottom": 31.0,
+                    },
+                ],
+            ),
         ]
     )
 
@@ -63,10 +95,21 @@ def test_pdf_reader_extracts_page_aware_text(
     result = PdfStatementTextReader().read(source)
 
     assert len(result.pages) == 2
+
     assert result.pages[0].number == 1
     assert result.pages[0].text == "First page"
+    assert len(result.pages[0].words) == 1
+    assert result.pages[0].words[0].text == "First"
+    assert result.pages[0].words[0].x0 == 10.0
+    assert result.pages[0].words[0].x1 == 30.0
+    assert result.pages[0].words[0].top == 20.0
+    assert result.pages[0].words[0].bottom == 30.0
+
     assert result.pages[1].number == 2
     assert result.pages[1].text == "Second page"
+    assert len(result.pages[1].words) == 1
+    assert result.pages[1].words[0].text == "Second"
+
     assert result.text == "First page\nSecond page"
 
 
@@ -88,6 +131,7 @@ def test_pdf_reader_normalizes_missing_page_text(
     result = PdfStatementTextReader().read(source)
 
     assert result.pages[0].text == ""
+    assert result.pages[0].words == ()
 
 
 def test_pdf_reader_wraps_source_errors(

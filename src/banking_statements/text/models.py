@@ -1,7 +1,7 @@
 """
 src/banking_statements/text/models.py
 
-Normalized text extracted from banking statement pages.
+Normalized text and layout evidence extracted from banking statement pages.
 """
 
 from __future__ import annotations
@@ -10,11 +10,23 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True, slots=True)
+class StatementWord:
+    """Positioned word extracted from a banking statement page."""
+
+    text: str
+    x0: float
+    x1: float
+    top: float
+    bottom: float
+
+
+@dataclass(frozen=True, slots=True)
 class StatementPage:
-    """Text extracted from one banking statement page."""
+    """Text and optional layout evidence from one banking statement page."""
 
     number: int
     text: str
+    words: tuple[StatementWord, ...] = ()
 
     def __post_init__(self) -> None:
         """Validate page numbering."""
