@@ -301,7 +301,7 @@ def test_parse_interest_charge_transaction() -> None:
     assert transaction.description == "PURCHASE INTEREST CHARGE"
 
 
-def test_transaction_date_uses_prior_year_when_month_day_is_after_closing() -> (
+def test_transaction_date_uses_prior_year_when_month_day_is_after_closing() -> (  # noqa: E501
     None
 ):
     transactions = parse_activity_transactions(
