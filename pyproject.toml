@@ -1,6 +1,6 @@
 [project]
 name = "banking-statements"
-version = "0.1.0"
+version = "0.2.0"
 description = "A deterministic Python library for parsing, normalizing, and validating U.S. banking statements across institutions and statement formats."
 readme = "README.md"
 requires-python = ">=3.11"
