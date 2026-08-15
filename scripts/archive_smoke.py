@@ -18,6 +18,9 @@ from banking_statements.processors.chase import (
     CHASE_SIGNATURES,
     ChaseCreditCardProcessor,
 )
+from banking_statements.processors.chase.credit_card.activity import (
+    parse_activity_rows,
+)
 from banking_statements.processors.detection import InstitutionDetector
 from banking_statements.text import PdfStatementTextReader
 
@@ -136,6 +139,7 @@ def run_archive_smoke(
                 source,
                 text,
             )
+            activity_rows = parse_activity_rows(text)
         except Exception as exc:  # noqa: BLE001
             failures += 1
 
@@ -157,6 +161,7 @@ def run_archive_smoke(
             path,
             statement=statement,
             page_count=len(text.pages),
+            activity_row_count=len(activity_rows),
         )
 
     return failures
@@ -168,6 +173,7 @@ def _print_success(
     *,
     statement: ParsedStatement,
     page_count: int,
+    activity_row_count: int,
 ) -> None:
     """Print a concise normalized statement summary."""
     print(f"{label} PASS {path.name}")  # noqa: T201
@@ -186,7 +192,9 @@ def _print_success(
         f"account={statement.account.last4}",
     )
     print(  # noqa: T201
-        f"         transactions={len(statement.transactions)}",
+        "         "
+        f"activity_rows={activity_row_count} "
+        f"transactions={len(statement.transactions)}",
     )
 
 
