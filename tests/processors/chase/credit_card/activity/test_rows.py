@@ -474,3 +474,42 @@ def test_parse_interest_charge_row() -> None:
             amount_text="5.22",
         ),
     )
+
+
+def test_parse_balance_transfer_row() -> None:
+    rows = parse_activity_rows(
+        make_statement_text(
+            "\n".join(  # noqa: FLY002
+                (
+                    "PAYMENTS AND OTHER CREDITS",
+                    "02/24 PROMOTIONAL ADJUSTMENT -9,760.36",
+                    "BALANCE TRANSFERS",
+                    "02/24 PROMOTIONAL ADJUSTMENT 9,760.36",
+                    "INTEREST CHARGED",
+                    "02/25 PURCHASE INTEREST CHRG DEBIT ADJ 5.68",
+                    "TOTAL INTEREST FOR THIS PERIOD $5.68",
+                )
+            )
+        )
+    )
+
+    assert rows == (
+        ActivityRow(
+            section=ActivitySection.PAYMENTS_AND_OTHER_CREDITS,
+            date_text="02/24",
+            description="PROMOTIONAL ADJUSTMENT",
+            amount_text="-9,760.36",
+        ),
+        ActivityRow(
+            section=ActivitySection.BALANCE_TRANSFERS,
+            date_text="02/24",
+            description="PROMOTIONAL ADJUSTMENT",
+            amount_text="9,760.36",
+        ),
+        ActivityRow(
+            section=ActivitySection.INTEREST_CHARGED,
+            date_text="02/25",
+            description="PURCHASE INTEREST CHRG DEBIT ADJ",
+            amount_text="5.68",
+        ),
+    )

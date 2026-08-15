@@ -277,27 +277,6 @@ def test_transaction_date_supports_leap_day() -> None:
     assert transactions[0].date == date(2024, 2, 29)
 
 
-def test_transaction_date_rejects_ambiguous_year() -> None:
-    with pytest.raises(
-        ValueError,
-        match="is ambiguous for statement period",
-    ):
-        parse_activity_transactions(
-            (
-                ActivityRow(
-                    section=ActivitySection.PURCHASE,
-                    date_text="06/15",
-                    description="AMBIGUOUS DATE",
-                    amount_text="10.00",
-                ),
-            ),
-            period=StatementPeriod(
-                start=date(2026, 1, 1),
-                end=date(2027, 12, 31),
-            ),
-        )
-
-
 def test_parse_interest_charge_transaction() -> None:
     transactions = parse_activity_transactions(
         (
@@ -320,3 +299,64 @@ def test_parse_interest_charge_transaction() -> None:
     assert transaction.amount == Decimal("5.22")
     assert transaction.direction is TransactionDirection.DEBIT
     assert transaction.description == "PURCHASE INTEREST CHARGE"
+
+
+def test_transaction_date_can_reference_prior_calendar_year() -> None:
+    transactions = parse_activity_transactions(
+        (
+            ActivityRow(
+                section=ActivitySection.PAYMENTS_AND_OTHER_CREDITS,
+                date_text="12/24",
+                description="INTEREST CHARGE REVERSAL",
+                amount_text="-172.13",
+            ),
+        ),
+        period=StatementPeriod(
+            start=date(2024, 2, 25),
+            end=date(2024, 3, 24),
+        ),
+    )
+
+    assert transactions[0].date == date(2023, 12, 24)
+
+
+def test_transaction_date_uses_prior_year_when_month_day_is_after_closing() -> (  # noqa: E501
+    None
+):
+    transactions = parse_activity_transactions(
+        (
+            ActivityRow(
+                section=ActivitySection.PAYMENTS_AND_OTHER_CREDITS,
+                date_text="12/24",
+                description="INTEREST CHARGE REVERSAL",
+                amount_text="-172.13",
+            ),
+        ),
+        period=StatementPeriod(
+            start=date(2024, 2, 25),
+            end=date(2024, 3, 24),
+        ),
+    )
+
+    assert transactions[0].date == date(2023, 12, 24)
+
+
+def test_transaction_date_rejects_invalid_prior_year_calendar_date() -> None:
+    with pytest.raises(
+        ValueError,
+        match="Invalid Chase transaction calendar date",
+    ):
+        parse_activity_transactions(
+            (
+                ActivityRow(
+                    section=ActivitySection.PURCHASE,
+                    date_text="02/29",
+                    description="INVALID PRIOR YEAR DATE",
+                    amount_text="10.00",
+                ),
+            ),
+            period=StatementPeriod(
+                start=date(2024, 1, 1),
+                end=date(2024, 1, 31),
+            ),
+        )

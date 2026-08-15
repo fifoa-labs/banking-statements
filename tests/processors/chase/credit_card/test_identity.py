@@ -138,3 +138,24 @@ def test_parse_identity_requires_matching_closing_date() -> None:
                 )
             )
         )
+
+
+def test_parse_identity_accepts_unmasked_account_number() -> None:
+    identity = parse_identity(
+        make_statement_text(
+            "\n".join(  # noqa: FLY002
+                (
+                    "Account Number: 4147 2024 9352 7244",
+                    "Opening/Closing Date 12/04/23 - 01/03/24",
+                    "Statement Date: 01/03/24",
+                )
+            )
+        )
+    )
+
+    assert identity.account.account_type is AccountType.CREDIT_CARD
+    assert identity.account.display_number == "4147 2024 9352 7244"
+    assert identity.account.last4 == "7244"
+    assert identity.statement_start == date(2023, 12, 4)
+    assert identity.statement_end == date(2024, 1, 3)
+    assert identity.statement_date == date(2024, 1, 3)
