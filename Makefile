@@ -183,6 +183,31 @@ clean-coverage: ## Remove coverage output
 		htmlcov
 
 # ============================================
+# 🔐 PRIVATE DEVELOPMENT DATA
+# --------------------------------------------
+
+.PHONY: prep-private-data
+
+prep-private-data: ## Create private banking statement archive directories
+	@mkdir -p \
+		private-data/statements/chase/credit-card \
+		private-data/statements/chase/checking \
+		private-data/statements/chase/savings \
+		private-data/statements/wellsfargo/credit-card \
+		private-data/statements/wellsfargo/checking \
+		private-data/statements/wellsfargo/savings \
+		private-data/statements/capitalone/credit-card \
+		private-data/statements/capitalone/checking \
+		private-data/statements/capitalone/savings \
+		private-data/statements/usbank/credit-card \
+		private-data/statements/usbank/checking \
+		private-data/statements/usbank/savings \
+		private-data/statements/discover/credit-card \
+		private-data/statements/discover/checking \
+		private-data/statements/discover/savings
+	@echo "✅ Private statement archive directories ready"
+
+# ============================================
 # 🔎 STATEMENT INSPECTION
 # --------------------------------------------
 
@@ -193,10 +218,14 @@ inspect-statement: ## Inspect PDF text: make inspect-statement file=... [page=] 
 		echo "Usage: make inspect-statement file=path/to/statement.pdf [page=1] [head=1000]"; \
 		exit 1; \
 	fi
-	@uv run python scripts/inspect_statement.py \
-		"$(file)" \
-		$(if $(page),--page "$(page)",) \
-		$(if $(head),--head "$(head)",)
+	@args='"$(file)"'; \
+	if [ -n "$(page)" ]; then \
+		args="$$args --page $(page)"; \
+	fi; \
+	if [ -n "$(head)" ]; then \
+		args="$$args --head $(head)"; \
+	fi; \
+	eval uv run python scripts/inspect_statement.py $$args
 
 smoke-archive: ## Smoke-test statements: make smoke-archive folder=... [limit=] [continue=1] [traceback=1]
 	@if [ -z "$(folder)" ]; then \
@@ -226,6 +255,7 @@ tree: ## List files under : make tree [folder=]
 	find "$$target" -type f \
 		-not -path "*/.git/*" \
 		-not -path "*/data/*" \
+		-not -path "*/private-data/*" \
 		-not -path "*/locale/*" \
 		-not -path "*/node_modules/*" \
 		-not -path "*/fixtures/*" \

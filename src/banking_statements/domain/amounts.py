@@ -23,9 +23,13 @@ def to_decimal(value: Decimal | int | str) -> Decimal:
         message = "Financial value cannot be empty."
         raise ValueError(message)
 
-    negative = text.startswith("(") and text.endswith(")")
-    if negative:
+    negative_parentheses = text.startswith("(") and text.endswith(")")
+    if negative_parentheses:
         text = text[1:-1].strip()
+
+    negative_sign = text.startswith("-")
+    if negative_sign:
+        text = text[1:].strip()
 
     if text.startswith("$"):
         text = text[1:].strip()
@@ -36,7 +40,7 @@ def to_decimal(value: Decimal | int | str) -> Decimal:
         message = f"Invalid financial value: {value!r}."
         raise ValueError(message) from exc
 
-    if negative:
+    if negative_parentheses or negative_sign:
         return -amount
 
     return amount
