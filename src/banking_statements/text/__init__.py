@@ -6,7 +6,7 @@ Public text extraction contracts and models.
 
 from __future__ import annotations
 
-from .models import StatementPage, StatementText
+from .models import StatementPage, StatementText, StatementWord
 from .pdf import PdfStatementTextReader
 from .readers import StatementTextReader
 
@@ -15,4 +15,5 @@ __all__ = [
     "StatementPage",
     "StatementText",
     "StatementTextReader",
+    "StatementWord",
 ]

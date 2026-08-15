@@ -15,7 +15,10 @@ from banking_statements.processors.chase import (
     ChaseCheckingProcessor,
     ChaseCreditCardProcessor,
 )
-from banking_statements.processors.wellsfargo import WELLS_FARGO_SIGNATURES
+from banking_statements.processors.wellsfargo import (
+    WELLS_FARGO_SIGNATURES,
+    WellsFargoCheckingProcessor,
+)
 
 
 def test_build_default_institution_detector() -> None:
@@ -30,6 +33,7 @@ def test_build_default_institution_detector() -> None:
 def test_build_default_processor_registry() -> None:
     registry = build_default_processor_registry()
 
-    assert len(registry.processors) == 2
+    assert len(registry.processors) == 3
     assert isinstance(registry.processors[0], ChaseCreditCardProcessor)
     assert isinstance(registry.processors[1], ChaseCheckingProcessor)
+    assert isinstance(registry.processors[2], WellsFargoCheckingProcessor)

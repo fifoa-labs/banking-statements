@@ -6,8 +6,14 @@ Wells Fargo statement processor support.
 
 from __future__ import annotations
 
-from .signatures import WELLS_FARGO_SIGNATURES
+from .checking import WellsFargoCheckingProcessor
+from .signatures import (
+    WELLS_FARGO_CHECKING_SIGNATURES,
+    WELLS_FARGO_SIGNATURES,
+)
 
 __all__ = [
+    "WELLS_FARGO_CHECKING_SIGNATURES",
     "WELLS_FARGO_SIGNATURES",
+    "WellsFargoCheckingProcessor",
 ]
