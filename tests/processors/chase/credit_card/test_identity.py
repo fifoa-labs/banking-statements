@@ -35,7 +35,7 @@ def test_parse_identity() -> None:
             "\n".join(  # noqa: FLY002
                 (
                     "Account Number: XXXX XXXX XXXX 9062",
-                    "Opening/Closing Date 03/12/26 - 04/11/26",
+                    "pening/Closing Date 03/12/26 - 04/11/26",
                     "Statement Date: 04/11/26",
                 )
             )
@@ -56,7 +56,7 @@ def test_parse_identity_accepts_lowercase_account_number_marker() -> None:
             "\n".join(  # noqa: FLY002
                 (
                     "Account number: XXXX XXXX XXXX 7001",
-                    "Opening/Closing Date 12/10/24 - 01/09/25",
+                    "pening/Closing Date 12/10/24 - 01/09/25",
                     "Statement Date: 01/09/25",
                 )
             )
@@ -80,7 +80,7 @@ def test_parse_identity_requires_account_number() -> None:
             make_statement_text(
                 "\n".join(  # noqa: FLY002
                     (
-                        "Opening/Closing Date 03/12/26 - 04/11/26",
+                        "pening/Closing Date 03/12/26 - 04/11/26",
                         "Statement Date: 04/11/26",
                     )
                 )
@@ -115,7 +115,7 @@ def test_parse_identity_requires_statement_date() -> None:
                 "\n".join(  # noqa: FLY002
                     (
                         "Account Number: XXXX XXXX XXXX 9062",
-                        "Opening/Closing Date 03/12/26 - 04/11/26",
+                        "pening/Closing Date 03/12/26 - 04/11/26",
                     )
                 )
             )
@@ -132,7 +132,7 @@ def test_parse_identity_requires_matching_closing_date() -> None:
                 "\n".join(  # noqa: FLY002
                     (
                         "Account Number: XXXX XXXX XXXX 9062",
-                        "Opening/Closing Date 03/12/26 - 04/11/26",
+                        "pening/Closing Date 03/12/26 - 04/11/26",
                         "Statement Date: 04/12/26",
                     )
                 )
@@ -146,7 +146,7 @@ def test_parse_identity_accepts_unmasked_account_number() -> None:
             "\n".join(  # noqa: FLY002
                 (
                     "Account Number: 4147 2024 9352 7244",
-                    "Opening/Closing Date 12/04/23 - 01/03/24",
+                    "pening/Closing Date 12/04/23 - 01/03/24",
                     "Statement Date: 01/03/24",
                 )
             )
@@ -159,3 +159,46 @@ def test_parse_identity_accepts_unmasked_account_number() -> None:
     assert identity.statement_start == date(2023, 12, 4)
     assert identity.statement_end == date(2024, 1, 3)
     assert identity.statement_date == date(2024, 1, 3)
+
+
+def test_parse_identity_accepts_unlabeled_account_number_fallback() -> None:
+    identity = parse_identity(
+        make_statement_text(
+            "\n".join(  # noqa: FLY002
+                (
+                    (
+                        "A A A c CC cou CC nt OO Nu UU m NN ber TT : "
+                        "4147 2023 1527 3936"
+                    ),
+                    "Opening/Closing Date 08/25/22 - 09/24/22",
+                    "Statement Date: 09/24/22",
+                )
+            )
+        )
+    )
+
+    assert identity.account.account_type is AccountType.CREDIT_CARD
+    assert identity.account.display_number == "4147 2023 1527 3936"
+    assert identity.account.last4 == "3936"
+    assert identity.statement_start == date(2022, 8, 25)
+    assert identity.statement_end == date(2022, 9, 24)
+    assert identity.statement_date == date(2022, 9, 24)
+
+
+def test_parse_identity_rejects_multiple_unlabeled_account_numbers() -> None:
+    with pytest.raises(
+        ValueError,
+        match="account number was not found uniquely",
+    ):
+        parse_identity(
+            make_statement_text(
+                "\n".join(  # noqa: FLY002
+                    (
+                        "4147 2023 1527 3936",
+                        "4266 8415 1445 9062",
+                        "Opening/Closing Date 08/25/22 - 09/24/22",
+                        "Statement Date: 09/24/22",
+                    )
+                )
+            )
+        )

@@ -513,3 +513,26 @@ def test_parse_balance_transfer_row() -> None:
             amount_text="5.68",
         ),
     )
+
+
+def test_parse_my_chase_loan_as_balance_transfer_row() -> None:
+    rows = parse_activity_rows(
+        make_statement_text(
+            "\n".join(  # noqa: FLY002
+                (
+                    "BALANCE TRANSFERS / MY CHASE LOAN",
+                    "03/27 My Chase Loan TO 0387 8,000.00",
+                    "2021 Totals Year-to-Date",
+                )
+            )
+        )
+    )
+
+    assert rows == (
+        ActivityRow(
+            section=ActivitySection.BALANCE_TRANSFERS,
+            date_text="03/27",
+            description="My Chase Loan TO 0387",
+            amount_text="8,000.00",
+        ),
+    )

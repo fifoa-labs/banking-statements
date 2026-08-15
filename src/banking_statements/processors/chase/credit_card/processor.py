@@ -36,19 +36,16 @@ class ChaseCreditCardProcessor:
 
     def match(self, text: StatementText) -> ProcessorMatch:
         """Determine whether the statement matches this processor."""
+        # Chase PDF extraction has been observed to emit both
+        # "Opening/Closing Date" and "O`pening/Closing Date".
+        # Matching uses the stable substring because the variation is
+        # extraction noise rather than a distinct statement format.
         markers = (
-            "www.chase.com/cardhelp",
-            "Opening/Closing Date",
+            "chase.com/cardhelp",
+            "pening/Closing Date",
         )
 
-        account_markers = (
-            "Account Number:",
-            "Account number:",
-        )
-
-        matched = all(marker in text.text for marker in markers) and any(
-            marker in text.text for marker in account_markers
-        )
+        matched = all(marker in text.text for marker in markers)
 
         return ProcessorMatch(
             matched=matched,

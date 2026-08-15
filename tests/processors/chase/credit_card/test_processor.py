@@ -43,7 +43,6 @@ def test_processor_matches_supported_structure() -> None:
         "\n".join(  # noqa: FLY002
             (
                 "www.chase.com/cardhelp",
-                "Account Number: XXXX XXXX XXXX 1234",
                 "Opening/Closing Date 01/01/26 - 01/31/26",
             )
         )
@@ -85,7 +84,7 @@ def test_processor_parses_statement_identity() -> None:
                 "Account Number: XXXX XXXX XXXX 9062",
                 "Previous Balance $0.00",
                 "New Balance $0.00",
-                "Opening/Closing Date 03/12/26 - 04/11/26",
+                "pening/Closing Date 03/12/26 - 04/11/26",
                 "Date of",
                 "Transaction Merchant Name or Transaction Description $ Amount",  # noqa: E501
                 "Statement Date: 04/11/26",
@@ -126,7 +125,7 @@ def test_processor_parses_statement_identity_and_transactions() -> None:
                 "Account Number: XXXX XXXX XXXX 9062",
                 "Previous Balance $0.00",
                 "New Balance $8.25",
-                "Opening/Closing Date 03/12/26 - 04/11/26",
+                "pening/Closing Date 03/12/26 - 04/11/26",
                 "Date of",
                 "Transaction Merchant Name or Transaction Description $ Amount",  # noqa: E501
                 "Statement Date: 04/11/26",
@@ -163,15 +162,18 @@ def test_processor_parses_statement_identity_and_transactions() -> None:
     assert transaction.description == "SAMPLE MERCHANT"
 
 
-def test_processor_matches_lowercase_account_number_marker() -> None:
+def test_processor_matches_when_account_number_text_is_mangled() -> None:
     processor = ChaseCreditCardProcessor()
 
     text = make_statement_text(
         "\n".join(  # noqa: FLY002
             (
                 "www.chase.com/cardhelp",
-                "Account number: XXXX XXXX XXXX 7001",
-                "Opening/Closing Date 12/10/24 - 01/09/25",
+                (
+                    "A A A c CC cou CC nt OO Nu UU m NN ber TT : "
+                    "4147 2023 1527 3936"
+                ),
+                "Opening/Closing Date 08/25/22 - 09/24/22",
             )
         )
     )

@@ -2,6 +2,13 @@
 src/banking_statements/processors/chase/signatures.py
 
 Institution detection signatures for Chase statements.
+
+Institution detection intentionally uses only strong, stable Chase markers.
+Account-number labels are not required here because PDF text extraction can
+heavily corrupt those labels even when the statement is clearly from Chase.
+
+The opening/closing-date marker uses its stable substring because extraction
+has produced both "Opening/Closing Date" and "O`pening/Closing Date".
 """
 
 from __future__ import annotations
@@ -12,17 +19,8 @@ CHASE_SIGNATURES = (
     InstitutionSignature(
         institution="chase",
         required_markers=(
-            "www.chase.com/cardhelp",
-            "Account Number:",
-            "Opening/Closing Date",
-        ),
-    ),
-    InstitutionSignature(
-        institution="chase",
-        required_markers=(
-            "www.chase.com/cardhelp",
-            "Account number:",
-            "Opening/Closing Date",
+            "chase.com/cardhelp",
+            "pening/Closing Date",
         ),
     ),
 )
