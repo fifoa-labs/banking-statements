@@ -8,11 +8,13 @@ from __future__ import annotations
 
 from .business_checking import WellsFargoBusinessCheckingProcessor
 from .business_credit_card import WellsFargoBusinessCreditCardProcessor
+from .business_line_of_credit import WellsFargoBusinessLineOfCreditProcessor
 from .checking import WellsFargoCheckingProcessor
 from .credit_card import WellsFargoCreditCardProcessor
 from .signatures import (
     WELLS_FARGO_BUSINESS_CHECKING_SIGNATURES,
     WELLS_FARGO_BUSINESS_CREDIT_CARD_SIGNATURES,
+    WELLS_FARGO_BUSINESS_LINE_OF_CREDIT_SIGNATURES,
     WELLS_FARGO_CHECKING_SIGNATURES,
     WELLS_FARGO_CREDIT_CARD_SIGNATURES,
     WELLS_FARGO_SIGNATURES,
@@ -21,11 +23,13 @@ from .signatures import (
 __all__ = [
     "WELLS_FARGO_BUSINESS_CHECKING_SIGNATURES",
     "WELLS_FARGO_BUSINESS_CREDIT_CARD_SIGNATURES",
+    "WELLS_FARGO_BUSINESS_LINE_OF_CREDIT_SIGNATURES",
     "WELLS_FARGO_CHECKING_SIGNATURES",
     "WELLS_FARGO_CREDIT_CARD_SIGNATURES",
     "WELLS_FARGO_SIGNATURES",
     "WellsFargoBusinessCheckingProcessor",
     "WellsFargoBusinessCreditCardProcessor",
+    "WellsFargoBusinessLineOfCreditProcessor",
     "WellsFargoCheckingProcessor",
     "WellsFargoCreditCardProcessor",
 ]

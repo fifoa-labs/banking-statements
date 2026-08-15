@@ -24,6 +24,7 @@ class AccountType(StrEnum):
     CHECKING = "checking"
     SAVINGS = "savings"
     CREDIT_CARD = "credit_card"
+    LINE_OF_CREDIT = "line_of_credit"
 
 
 @dataclass(frozen=True, slots=True)

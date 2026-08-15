@@ -17,6 +17,7 @@ from banking_statements.processors.wellsfargo import (
     WELLS_FARGO_SIGNATURES,
     WellsFargoBusinessCheckingProcessor,
     WellsFargoBusinessCreditCardProcessor,
+    WellsFargoBusinessLineOfCreditProcessor,
     WellsFargoCheckingProcessor,
     WellsFargoCreditCardProcessor,
 )
@@ -42,5 +43,6 @@ def build_default_processor_registry() -> ProcessorRegistry:
             WellsFargoCreditCardProcessor(),
             WellsFargoBusinessCheckingProcessor(),
             WellsFargoBusinessCreditCardProcessor(),
+            WellsFargoBusinessLineOfCreditProcessor(),
         )
     )

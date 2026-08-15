@@ -62,6 +62,19 @@ WELLS_FARGO_BUSINESS_CREDIT_CARD_SIGNATURES = (
     ),
 )
 
+WELLS_FARGO_BUSINESS_LINE_OF_CREDIT_SIGNATURES = (
+    InstitutionSignature(
+        institution="wellsfargo",
+        required_markers=(
+            "BUSINESSLINE",
+            "Statement Closing Date",
+            "Days in Billing Cycle",
+            "Credit Line",
+            "Account Summary",
+        ),
+    ),
+)
+
 WELLS_FARGO_SIGNATURES = (
     InstitutionSignature(
         institution="wellsfargo",
@@ -74,4 +87,5 @@ WELLS_FARGO_SIGNATURES = (
     *WELLS_FARGO_CREDIT_CARD_SIGNATURES,
     *WELLS_FARGO_BUSINESS_CHECKING_SIGNATURES,
     *WELLS_FARGO_BUSINESS_CREDIT_CARD_SIGNATURES,
+    *WELLS_FARGO_BUSINESS_LINE_OF_CREDIT_SIGNATURES,
 )

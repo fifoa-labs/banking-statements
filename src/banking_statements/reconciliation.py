@@ -29,6 +29,14 @@ class StatementReconciliation:
     reconciled: bool
 
 
+_DEBT_ACCOUNT_TYPES = frozenset(
+    {
+        AccountType.CREDIT_CARD,
+        AccountType.LINE_OF_CREDIT,
+    }
+)
+
+
 def reconcile_statement(
     statement: ParsedStatement,
 ) -> StatementReconciliation:
@@ -50,7 +58,7 @@ def reconcile_statement(
         start=Decimal("0"),
     )
 
-    if statement.account.account_type is AccountType.CREDIT_CARD:
+    if statement.account.account_type in _DEBT_ACCOUNT_TYPES:
         expected_closing_balance = (
             statement.balances.opening_balance
             + transaction_debits
