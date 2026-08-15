@@ -8,10 +8,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from banking_statements.domain import (
+    ParsedStatement,
+    StatementPeriod,
+    StatementSource,
+)
 from banking_statements.processors.base import ProcessorMatch
 
+from .identity import parse_identity
+
 if TYPE_CHECKING:
-    from banking_statements.domain import ParsedStatement, StatementSource
     from banking_statements.text import StatementText
 
 
@@ -50,9 +56,16 @@ class ChaseCreditCardProcessor:
         source: StatementSource,
         text: StatementText,
     ) -> ParsedStatement:
-        """Parse a Chase credit-card statement."""
-        del source
-        del text
+        """Parse Chase credit-card statement identity."""
+        identity = parse_identity(text)
 
-        msg = "Chase credit-card identity parsing is not implemented."
-        raise NotImplementedError(msg)
+        return ParsedStatement(
+            source=source,
+            institution="chase",
+            account=identity.account,
+            processor=self.name,
+            period=StatementPeriod(
+                start=identity.statement_start,
+                end=identity.statement_end,
+            ),
+        )

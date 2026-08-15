@@ -24,6 +24,8 @@ from banking_statements.text import PdfStatementTextReader
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from banking_statements.domain import ParsedStatement
+
 
 def build_parser() -> argparse.ArgumentParser:
     """Build the command-line argument parser."""
@@ -106,7 +108,7 @@ def run_archive_smoke(
     continue_on_error: bool,
     show_traceback: bool,
 ) -> int:
-    """Inspect statements and return the number of failures."""
+    """Parse statements and return the number of failures."""
     reader = PdfStatementTextReader()
     detector = build_institution_detector()
     registry = build_processor_registry()
@@ -126,8 +128,14 @@ def run_archive_smoke(
                 sha256=file_sha256(path),
             )
             text = reader.read(source)
-            institution = detector.detect(text)
+
+            detector.detect(text)
+
             processor = registry.select(text)
+            statement = processor.parse(
+                source,
+                text,
+            )
         except Exception as exc:  # noqa: BLE001
             failures += 1
 
@@ -147,8 +155,7 @@ def run_archive_smoke(
         _print_success(
             label,
             path,
-            institution=institution,
-            processor=processor.name,
+            statement=statement,
             page_count=len(text.pages),
         )
 
@@ -159,17 +166,27 @@ def _print_success(
     label: str,
     path: Path,
     *,
-    institution: str,
-    processor: str,
+    statement: ParsedStatement,
     page_count: int,
 ) -> None:
-    """Print a concise statement-processing summary."""
+    """Print a concise normalized statement summary."""
     print(f"{label} PASS {path.name}")  # noqa: T201
     print(  # noqa: T201
         "         "
-        f"institution={institution} "
-        f"processor={processor} "
+        f"institution={statement.institution} "
+        f"processor={statement.processor} "
         f"pages={page_count}",
+    )
+    print(  # noqa: T201
+        "         "
+        f"type={statement.account.account_type.value} "
+        f"period={statement.period.start.isoformat()}"
+        ".."
+        f"{statement.period.end.isoformat()} "
+        f"account={statement.account.last4}",
+    )
+    print(  # noqa: T201
+        f"         transactions={len(statement.transactions)}",
     )
 
 

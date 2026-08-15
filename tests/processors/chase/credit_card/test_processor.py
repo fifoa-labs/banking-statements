@@ -6,9 +6,8 @@ Tests for the Chase credit-card statement processor.
 
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
-
-import pytest
 
 from banking_statements.domain import StatementSource
 from banking_statements.processors.chase import ChaseCreditCardProcessor
@@ -69,7 +68,7 @@ def test_processor_rejects_unsupported_structure() -> None:
     )
 
 
-def test_processor_stops_at_identity_boundary() -> None:
+def test_processor_parses_statement_identity() -> None:
     processor = ChaseCreditCardProcessor()
 
     source = StatementSource(
@@ -77,11 +76,30 @@ def test_processor_stops_at_identity_boundary() -> None:
         sha256="abc123",
     )
 
-    with pytest.raises(
-        NotImplementedError,
-        match="Chase credit-card identity parsing is not implemented",
-    ):
-        processor.parse(
-            source,
-            make_statement_text("statement"),
+    text = make_statement_text(
+        "\n".join(  # noqa: FLY002
+            (
+                "www.chase.com/cardhelp",
+                "Account Number: XXXX XXXX XXXX 9062",
+                "Opening/Closing Date 03/12/26 - 04/11/26",
+                "Date of",
+                "Transaction Merchant Name or Transaction Description $ Amount",  # noqa: E501
+                "Statement Date: 04/11/26",
+            )
         )
+    )
+
+    statement = processor.parse(
+        source,
+        text,
+    )
+
+    assert statement.source is source
+    assert statement.institution == "chase"
+    assert statement.processor == "chase.credit_card.v1"
+    assert statement.account.account_type.value == "credit_card"
+    assert statement.account.display_number == "XXXX XXXX XXXX 9062"
+    assert statement.account.last4 == "9062"
+    assert statement.period.start == date(2026, 3, 12)
+    assert statement.period.end == date(2026, 4, 11)
+    assert statement.transactions == ()
