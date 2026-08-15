@@ -23,11 +23,12 @@ formats, ambiguous processor matches, malformed recognized data, and unknown
 statement behavior should fail explicitly rather than being silently ignored
 or guessed.
 
-Version `0.2.0` adds real Chase credit-card statement support on top of the
-generic package foundation introduced in `0.1.0`. The Chase credit-card
-processor has been developed against a broad private historical corpus spanning
-observed statement formats from 2019 through 2026. Public tests remain fully
-synthetic and contain no private financial data.
+Version `0.2.0` introduced real Chase credit-card statement support on top of
+the generic package foundation established in `0.1.0`. Current development also
+includes Chase checking statement support through an isolated checking
+processor. Both processor families have been developed against private
+historical corpora spanning observed statement formats from 2019 through 2026.
+Public tests remain fully synthetic and contain no private financial data.
 
 The package intentionally focuses on answering:
 
@@ -67,6 +68,12 @@ Chase
         historical statement layouts
         co-branded statement layouts
         observed formats spanning 2019–2026
+
+    checking
+        Chase Total Checking statements
+        multi-page transaction detail
+        wrapped transaction descriptions
+        observed formats spanning 2019–2026
 ```
 
 Current normalized domain includes:
@@ -91,6 +98,14 @@ purchases, payments, merchant credits, fees, interest charges, balance
 transfers, My Chase Loan activity, promotional adjustments, reversals,
 cross-year transaction dates, historical transaction-date references,
 foreign-currency continuation preservation, and statement reconciliation.
+
+Current Chase checking capabilities include account identity, statement
+periods, beginning and ending balances, signed transaction-table parsing,
+multi-page transaction detail, wrapped and continued descriptions, deposits,
+withdrawals, ACH activity, card payments, transfers, fees, credits, cross-year
+transaction dates, debit/credit normalization, and statement reconciliation.
+The private checking corpus currently validates 182 of 182 statements with
+strict reconciliation and zero difference.
 
 Quality gates include Ruff, strict mypy, pytest, 100% branch coverage,
 distribution validation, typed-wheel validation, and clean-wheel installation.
@@ -120,7 +135,7 @@ uv sync --dev
 ## Basic Usage
 
 The package exposes generic domain primitives plus implemented statement
-processors. The current institution-specific milestone is Chase credit cards.
+processors. Current Chase processor families cover credit cards and checking.
 
 ```python
 from datetime import date
@@ -152,8 +167,14 @@ transaction = TransactionEvent(
 )
 ```
 
-Chase credit-card statements are currently handled by the stable processor
-identifier `chase.credit_card.v1`.
+Chase credit-card statements are handled by the stable processor identifier
+`chase.credit_card.v1`.
+
+Chase checking statements are handled by:
+
+```text
+chase.checking.v1
+```
 
 
 ## Chase Credit Card Support
@@ -211,6 +232,57 @@ reversals
 Normalized amounts are positive magnitudes and `TransactionDirection` carries
 the economic direction.
 
+
+## Chase Checking Support
+
+Chase checking statements are handled through:
+
+```text
+chase.checking.v1
+```
+
+The processor has been validated against a private chronological corpus of 182
+statements spanning observed formats from 2019 through 2026. The complete
+private corpus currently passes strict parsing and reconciliation:
+
+```text
+182 / 182 PASS
+reconciliation=PASS
+difference=0.00
+```
+
+The parser supports statement identity, reporting periods, beginning and ending
+balances, transaction-detail tables, multi-page activity sections, wrapped
+transaction descriptions, and normalized checking transactions.
+
+Checking transaction rows are reconstructed from statement text shaped like:
+
+```text
+DATE DESCRIPTION AMOUNT BALANCE
+```
+
+The signed statement amount is interpreted from the checking account's
+perspective:
+
+```text
+positive amount
+    → CREDIT
+
+negative amount
+    → DEBIT
+```
+
+Normalized `TransactionEvent.amount` values remain positive magnitudes while
+`TransactionDirection` carries the economic direction.
+
+Chase checking statements can include description continuations on later
+physical lines. The processor reconstructs those logical rows before economic
+normalization rather than silently discarding continuation content.
+
+The running-balance column remains parser evidence from the source statement;
+the normalized public transaction model intentionally stays focused on the
+transaction date, amount, direction, description, and optional source evidence.
+
 ## Reconciliation
 
 Reconciliation is optional and separate from parsing.
@@ -221,7 +293,9 @@ from banking_statements.reconciliation import reconcile_statement
 result = reconcile_statement(statement)
 ```
 
-The reconciliation check compares:
+Reconciliation is account-type aware.
+
+For credit-card balances:
 
 ```text
 opening balance
@@ -230,9 +304,18 @@ opening balance
 = expected closing balance
 ```
 
-against the closing balance reported by the statement. The result includes the
-parsed debit and credit totals, expected closing balance, difference, and a
-`reconciled` boolean. A mismatch does not modify or reject the parsed statement.
+For deposit accounts such as checking and savings:
+
+```text
+opening balance
++ parsed credits
+- parsed debits
+= expected closing balance
+```
+
+The result includes the parsed debit and credit totals, expected closing
+balance, difference, and a `reconciled` boolean. A mismatch does not modify or
+reject the parsed statement.
 
 The private archive smoke tooling is stricter by default and treats a
 reconciliation mismatch as a smoke failure so incomplete or misdirected
@@ -468,14 +551,18 @@ Current implemented support:
 ```text
 Chase
     credit cards
+    checking
 ```
 
-The current Chase credit-card processor has been validated against a broad
-private historical corpus covering observed statement formats from 2019 through
-2026.
+The Chase credit-card processor has been validated against a broad private
+historical corpus covering observed statement formats from 2019 through 2026.
 
-Future processor families may include Chase checking, Chase savings, U.S. Bank,
-Wells Fargo, Capital One, Bank of America, and other U.S. institutions.
+The Chase checking processor has been validated against a private historical
+corpus of 182 statements covering observed formats from 2019 through 2026, with
+all 182 currently passing strict parsing and reconciliation.
+
+Future processor families may include Chase savings, U.S. Bank, Wells Fargo,
+Capital One, Bank of America, and other U.S. institutions.
 
 A bank or statement format is listed as supported only after its processor has
 been implemented and validated against real statement evidence.
@@ -844,10 +931,24 @@ Current milestone:
     statement reconciliation
 ```
 
-Expected next phases:
+Current development milestone:
 
 ```text
 Chase checking
+    chase.checking.v1
+    account identity
+    statement periods
+    beginning and ending balances
+    multi-page transaction parsing
+    wrapped description reconstruction
+    debit/credit normalization
+    account-type-aware reconciliation
+    182 / 182 private statements PASS
+```
+
+Expected next phases:
+
+```text
 Chase savings
 additional institutions
 additional statement grammars

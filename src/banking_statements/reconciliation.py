@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from banking_statements.domain import (
+    AccountType,
     ParsedStatement,
     TransactionDirection,
 )
@@ -49,11 +50,18 @@ def reconcile_statement(
         start=Decimal("0"),
     )
 
-    expected_closing_balance = (
-        statement.balances.opening_balance
-        + transaction_debits
-        - transaction_credits
-    )
+    if statement.account.account_type is AccountType.CREDIT_CARD:
+        expected_closing_balance = (
+            statement.balances.opening_balance
+            + transaction_debits
+            - transaction_credits
+        )
+    else:
+        expected_closing_balance = (
+            statement.balances.opening_balance
+            + transaction_credits
+            - transaction_debits
+        )
 
     difference = statement.balances.closing_balance - expected_closing_balance
 

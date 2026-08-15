@@ -78,10 +78,8 @@ from banking_statements.domain import StatementSource
 from banking_statements.processors import ProcessorRegistry
 from banking_statements.processors.chase import (
     CHASE_SIGNATURES,
+    ChaseCheckingProcessor,
     ChaseCreditCardProcessor,
-)
-from banking_statements.processors.chase.credit_card.activity import (
-    parse_activity_rows,
 )
 from banking_statements.processors.detection import InstitutionDetector
 from banking_statements.reconciliation import reconcile_statement
@@ -167,6 +165,7 @@ def build_processor_registry() -> ProcessorRegistry:
     return ProcessorRegistry(
         [
             ChaseCreditCardProcessor(),
+            ChaseCheckingProcessor(),
         ]
     )
 
@@ -218,7 +217,6 @@ def run_archive_smoke(
                 source,
                 text,
             )
-            activity_rows = parse_activity_rows(text)
             reconciliation = reconcile_statement(statement)
         except Exception as exc:  # noqa: BLE001
             failures += 1
@@ -245,7 +243,6 @@ def run_archive_smoke(
                 statement=statement,
                 reconciliation=reconciliation,
                 page_count=len(text.pages),
-                activity_row_count=len(activity_rows),
                 show_transactions=show_transactions,
             )
 
@@ -260,7 +257,6 @@ def run_archive_smoke(
             statement=statement,
             reconciliation=reconciliation,
             page_count=len(text.pages),
-            activity_row_count=len(activity_rows),
             show_transactions=show_transactions,
             reconciliation_is_warning=allow_reconciliation_failures,
         )
@@ -272,7 +268,6 @@ def _print_statement_details(
     *,
     statement: ParsedStatement,
     page_count: int,
-    activity_row_count: int,
 ) -> None:
     """Print normalized statement details shared by PASS and FAIL output."""
     print(  # noqa: T201
@@ -295,9 +290,7 @@ def _print_statement_details(
         f"closing_balance={statement.balances.closing_balance}",
     )
     print(  # noqa: T201
-        "         "
-        f"activity_rows={activity_row_count} "
-        f"transactions={len(statement.transactions)}",
+        f"         transactions={len(statement.transactions)}",
     )
 
 
@@ -322,7 +315,6 @@ def _print_success(  # noqa: PLR0913
     statement: ParsedStatement,
     reconciliation: StatementReconciliation,
     page_count: int,
-    activity_row_count: int,
     show_transactions: bool,
     reconciliation_is_warning: bool,
 ) -> None:
@@ -332,7 +324,6 @@ def _print_success(  # noqa: PLR0913
     _print_statement_details(
         statement=statement,
         page_count=page_count,
-        activity_row_count=activity_row_count,
     )
 
     reconciliation_status = (
@@ -358,7 +349,6 @@ def _print_failure(  # noqa: PLR0913
     statement: ParsedStatement,
     reconciliation: StatementReconciliation,
     page_count: int,
-    activity_row_count: int,
     show_transactions: bool,
 ) -> None:
     """Print a reconciliation failure for an otherwise parsed statement."""
@@ -367,7 +357,6 @@ def _print_failure(  # noqa: PLR0913
     _print_statement_details(
         statement=statement,
         page_count=page_count,
-        activity_row_count=activity_row_count,
     )
 
     print(  # noqa: T201
