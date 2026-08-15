@@ -37,13 +37,17 @@ class ChaseCreditCardProcessor:
         """Determine whether the statement matches this processor."""
         markers = (
             "www.chase.com/cardhelp",
-            "Account Number:",
             "Opening/Closing Date",
-            "Date of",
-            "Transaction Merchant Name or Transaction Description $ Amount",
         )
 
-        matched = all(marker in text.text for marker in markers)
+        account_markers = (
+            "Account Number:",
+            "Account number:",
+        )
+
+        matched = all(marker in text.text for marker in markers) and any(
+            marker in text.text for marker in account_markers
+        )
 
         return ProcessorMatch(
             matched=matched,

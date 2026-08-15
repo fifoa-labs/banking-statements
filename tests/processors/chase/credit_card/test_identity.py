@@ -50,6 +50,27 @@ def test_parse_identity() -> None:
     assert identity.statement_date == date(2026, 4, 11)
 
 
+def test_parse_identity_accepts_lowercase_account_number_marker() -> None:
+    identity = parse_identity(
+        make_statement_text(
+            "\n".join(  # noqa: FLY002
+                (
+                    "Account number: XXXX XXXX XXXX 7001",
+                    "Opening/Closing Date 12/10/24 - 01/09/25",
+                    "Statement Date: 01/09/25",
+                )
+            )
+        )
+    )
+
+    assert identity.account.account_type is AccountType.CREDIT_CARD
+    assert identity.account.display_number == "XXXX XXXX XXXX 7001"
+    assert identity.account.last4 == "7001"
+    assert identity.statement_start == date(2024, 12, 10)
+    assert identity.statement_end == date(2025, 1, 9)
+    assert identity.statement_date == date(2025, 1, 9)
+
+
 def test_parse_identity_requires_account_number() -> None:
     with pytest.raises(
         ValueError,

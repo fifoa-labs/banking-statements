@@ -54,14 +54,13 @@ class InstitutionDetector:
             msg = "No known institution matched this statement."
             raise UnsupportedInstitutionError(msg)
 
-        if len(matches) > 1:
-            institutions = ", ".join(
-                signature.institution for signature in matches
-            )
-            msg = (
-                "Multiple institutions matched this statement: "
-                f"{institutions}."
-            )
+        institutions = tuple(
+            dict.fromkeys(signature.institution for signature in matches)
+        )
+
+        if len(institutions) > 1:
+            names = ", ".join(institutions)
+            msg = f"Multiple institutions matched this statement: {names}."
             raise AmbiguousInstitutionError(msg)
 
-        return matches[0].institution
+        return institutions[0]

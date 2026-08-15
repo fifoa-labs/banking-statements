@@ -9,14 +9,19 @@ from __future__ import annotations
 from banking_statements.processors.chase import CHASE_SIGNATURES
 
 
-def test_chase_signature_is_stable() -> None:
-    assert len(CHASE_SIGNATURES) == 1
+def test_chase_signatures_are_stable() -> None:
+    assert len(CHASE_SIGNATURES) == 2
 
-    signature = CHASE_SIGNATURES[0]
-
-    assert signature.institution == "chase"
-    assert signature.required_markers == (
+    assert CHASE_SIGNATURES[0].institution == "chase"
+    assert CHASE_SIGNATURES[0].required_markers == (
         "www.chase.com/cardhelp",
         "Account Number:",
+        "Opening/Closing Date",
+    )
+
+    assert CHASE_SIGNATURES[1].institution == "chase"
+    assert CHASE_SIGNATURES[1].required_markers == (
+        "www.chase.com/cardhelp",
+        "Account number:",
         "Opening/Closing Date",
     )

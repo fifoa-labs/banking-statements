@@ -104,3 +104,24 @@ def test_detector_rejects_multiple_matches() -> None:
         detector.detect(
             make_statement_text("ACCOUNT"),
         )
+
+
+def test_detector_allows_multiple_signatures_for_same_institution() -> None:
+    detector = InstitutionDetector(
+        (
+            InstitutionSignature(
+                institution="alpha",
+                required_markers=("ACCOUNT",),
+            ),
+            InstitutionSignature(
+                institution="alpha",
+                required_markers=("ACCOUNT", "CARD"),
+            ),
+        )
+    )
+
+    result = detector.detect(
+        make_statement_text("ACCOUNT CARD"),
+    )
+
+    assert result == "alpha"

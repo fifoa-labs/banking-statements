@@ -140,31 +140,29 @@ def test_transaction_date_resolves_across_year_boundary() -> None:
     assert transactions[1].date == date(2027, 1, 3)
 
 
-def test_transaction_date_must_fall_within_statement_period() -> None:
-    with pytest.raises(
-        ValueError,
-        match="does not fall within statement period",
-    ):
-        parse_activity_transactions(
-            (
-                ActivityRow(
-                    section=ActivitySection.PURCHASE,
-                    date_text="05/01",
-                    description="OUTSIDE PERIOD",
-                    amount_text="10.00",
-                ),
+def test_transaction_date_can_precede_statement_period() -> None:
+    transactions = parse_activity_transactions(
+        (
+            ActivityRow(
+                section=ActivitySection.PURCHASE,
+                date_text="05/01",
+                description="TST*MALA SICHUAN - KATY Katy TX",
+                amount_text="62.54",
             ),
-            period=StatementPeriod(
-                start=date(2026, 3, 12),
-                end=date(2026, 4, 11),
-            ),
-        )
+        ),
+        period=StatementPeriod(
+            start=date(2025, 5, 4),
+            end=date(2025, 6, 3),
+        ),
+    )
+
+    assert transactions[0].date == date(2025, 5, 1)
 
 
 def test_transaction_date_rejects_invalid_calendar_date() -> None:
     with pytest.raises(
         ValueError,
-        match="does not fall within statement period",
+        match="Invalid Chase transaction calendar date",
     ):
         parse_activity_transactions(
             (
@@ -206,7 +204,7 @@ def test_transaction_date_rejects_invalid_format() -> None:
 def test_transaction_date_rejects_impossible_calendar_date() -> None:
     with pytest.raises(
         ValueError,
-        match="does not fall within statement period",
+        match="Invalid Chase transaction calendar date",
     ):
         parse_activity_transactions(
             (
@@ -246,7 +244,7 @@ def test_transaction_date_supports_leap_day() -> None:
 def test_transaction_date_rejects_ambiguous_year() -> None:
     with pytest.raises(
         ValueError,
-        match="is ambiguous within statement period",
+        match="is ambiguous for statement period",
     ):
         parse_activity_transactions(
             (

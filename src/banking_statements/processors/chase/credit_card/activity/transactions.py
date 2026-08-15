@@ -29,7 +29,7 @@ def _resolve_transaction_date(
     date_text: str,
     period: StatementPeriod,
 ) -> date:
-    """Resolve a Chase month/day value within a statement period."""
+    """Resolve a Chase month/day value using the statement period."""
     match = _DATE_PATTERN.match(date_text)
 
     if match is None:
@@ -43,37 +43,51 @@ def _resolve_transaction_date(
 
     for year in range(
         period.start.year,
-        period.end.year + 1,
+        period.end.year + 2,
     ):
         try:
-            candidate = date(
-                year,
-                month,
-                day,
+            candidates.append(
+                date(
+                    year,
+                    month,
+                    day,
+                )
             )
         except ValueError:
             continue
 
-        if period.start <= candidate <= period.end:
-            candidates.append(candidate)
-
     if not candidates:
+        msg = f"Invalid Chase transaction calendar date: {date_text!r}."
+        raise ValueError(msg)
+
+    def distance_from_period(candidate: date) -> int:
+        if candidate < period.start:
+            return (period.start - candidate).days
+
+        if candidate > period.end:
+            return (candidate - period.end).days
+
+        return 0
+
+    minimum_distance = min(
+        distance_from_period(candidate) for candidate in candidates
+    )
+
+    nearest = tuple(
+        candidate
+        for candidate in candidates
+        if distance_from_period(candidate) == minimum_distance
+    )
+
+    if len(nearest) > 1:
         msg = (
-            f"Transaction date {date_text!r} does not fall within "
+            f"Transaction date {date_text!r} is ambiguous for "
             f"statement period {period.start.isoformat()}.."
             f"{period.end.isoformat()}."
         )
         raise ValueError(msg)
 
-    if len(candidates) > 1:
-        msg = (
-            f"Transaction date {date_text!r} is ambiguous within "
-            f"statement period {period.start.isoformat()}.."
-            f"{period.end.isoformat()}."
-        )
-        raise ValueError(msg)
-
-    return candidates[0]
+    return nearest[0]
 
 
 def parse_activity_transactions(

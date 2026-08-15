@@ -45,8 +45,6 @@ def test_processor_matches_supported_structure() -> None:
                 "www.chase.com/cardhelp",
                 "Account Number: XXXX XXXX XXXX 1234",
                 "Opening/Closing Date 01/01/26 - 01/31/26",
-                "Date of",
-                "Transaction Merchant Name or Transaction Description $ Amount",  # noqa: E501
             )
         )
     )
@@ -155,3 +153,22 @@ def test_processor_parses_statement_identity_and_transactions() -> None:
     assert transaction.amount == Decimal("8.25")
     assert transaction.direction is TransactionDirection.DEBIT
     assert transaction.description == "SAMPLE MERCHANT"
+
+
+def test_processor_matches_lowercase_account_number_marker() -> None:
+    processor = ChaseCreditCardProcessor()
+
+    text = make_statement_text(
+        "\n".join(  # noqa: FLY002
+            (
+                "www.chase.com/cardhelp",
+                "Account number: XXXX XXXX XXXX 7001",
+                "Opening/Closing Date 12/10/24 - 01/09/25",
+            )
+        )
+    )
+
+    match = processor.match(text)
+
+    assert match.matched is True
+    assert match.confidence == 100

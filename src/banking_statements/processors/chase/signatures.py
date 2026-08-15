@@ -17,4 +17,12 @@ CHASE_SIGNATURES = (
             "Opening/Closing Date",
         ),
     ),
+    InstitutionSignature(
+        institution="chase",
+        required_markers=(
+            "www.chase.com/cardhelp",
+            "Account number:",
+            "Opening/Closing Date",
+        ),
+    ),
 )

@@ -28,7 +28,8 @@ class ChaseCreditCardIdentity:
 
 
 _ACCOUNT_PATTERN = re.compile(
-    r"Account Number:\s+(?P<display>XXXX XXXX XXXX (?P<last4>\d{4}))",
+    r"Account [Nn]umber:\s+"
+    r"(?P<display>XXXX XXXX XXXX (?P<last4>\d{4}))",
 )
 
 _PERIOD_PATTERN = re.compile(
