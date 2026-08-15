@@ -56,7 +56,19 @@ CHASE_CHECKING_SIGNATURES = (
     ),
 )
 
+CHASE_HELOC_SIGNATURES = (
+    InstitutionSignature(
+        institution="chase",
+        required_markers=(
+            "JPMorgan Chase Bank, N.A.",
+            "Line of credit information",
+            "Transaction activity",
+        ),
+    ),
+)
+
 CHASE_SIGNATURES = (
     *CHASE_CREDIT_CARD_SIGNATURES,
     *CHASE_CHECKING_SIGNATURES,
+    *CHASE_HELOC_SIGNATURES,
 )

@@ -10,6 +10,7 @@ from banking_statements.processors.chase import (
     CHASE_SIGNATURES,
     ChaseCheckingProcessor,
     ChaseCreditCardProcessor,
+    ChaseHelocProcessor,
 )
 from banking_statements.processors.detection import InstitutionDetector
 from banking_statements.processors.registry import ProcessorRegistry
@@ -39,6 +40,7 @@ def build_default_processor_registry() -> ProcessorRegistry:
         (
             ChaseCreditCardProcessor(),
             ChaseCheckingProcessor(),
+            ChaseHelocProcessor(),
             WellsFargoCheckingProcessor(),
             WellsFargoCreditCardProcessor(),
             WellsFargoBusinessCheckingProcessor(),

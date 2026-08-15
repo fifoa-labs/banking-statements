@@ -9,6 +9,7 @@ from __future__ import annotations
 from banking_statements.processors.chase import (
     CHASE_CHECKING_SIGNATURES,
     CHASE_CREDIT_CARD_SIGNATURES,
+    CHASE_HELOC_SIGNATURES,
     CHASE_SIGNATURES,
 )
 
@@ -48,8 +49,20 @@ def test_chase_checking_signatures_are_stable() -> None:
     )
 
 
+def test_chase_heloc_signatures_are_stable() -> None:
+    assert len(CHASE_HELOC_SIGNATURES) == 1
+
+    assert CHASE_HELOC_SIGNATURES[0].institution == "chase"
+    assert CHASE_HELOC_SIGNATURES[0].required_markers == (
+        "JPMorgan Chase Bank, N.A.",
+        "Line of credit information",
+        "Transaction activity",
+    )
+
+
 def test_chase_signatures_include_all_account_families() -> None:
     assert (
         *CHASE_CREDIT_CARD_SIGNATURES,
         *CHASE_CHECKING_SIGNATURES,
+        *CHASE_HELOC_SIGNATURES,
     ) == CHASE_SIGNATURES
