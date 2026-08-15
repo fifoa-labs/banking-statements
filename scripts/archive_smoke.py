@@ -75,13 +75,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from banking_statements.domain import StatementSource
-from banking_statements.processors import ProcessorRegistry
-from banking_statements.processors.chase import (
-    CHASE_SIGNATURES,
-    ChaseCheckingProcessor,
-    ChaseCreditCardProcessor,
+from banking_statements.processors import (
+    build_default_institution_detector,
+    build_default_processor_registry,
 )
-from banking_statements.processors.detection import InstitutionDetector
 from banking_statements.reconciliation import reconcile_statement
 from banking_statements.text import PdfStatementTextReader
 
@@ -155,21 +152,6 @@ def discover_statements(
     )
 
 
-def build_institution_detector() -> InstitutionDetector:
-    """Return detector configured with implemented institutions."""
-    return InstitutionDetector((*CHASE_SIGNATURES,))
-
-
-def build_processor_registry() -> ProcessorRegistry:
-    """Return registry containing implemented statement processors."""
-    return ProcessorRegistry(
-        [
-            ChaseCreditCardProcessor(),
-            ChaseCheckingProcessor(),
-        ]
-    )
-
-
 def file_sha256(path: Path) -> str:
     """Return the SHA-256 digest for a statement file."""
     digest = sha256()
@@ -191,8 +173,8 @@ def run_archive_smoke(
 ) -> int:
     """Parse statements and return the number of smoke failures."""
     reader = PdfStatementTextReader()
-    detector = build_institution_detector()
-    registry = build_processor_registry()
+    detector = build_default_institution_detector()
+    registry = build_default_processor_registry()
 
     failures = 0
     total = len(statements)
