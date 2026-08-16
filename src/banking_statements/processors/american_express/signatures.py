@@ -1,0 +1,24 @@
+"""
+src/banking_statements/processors/american_express/signatures.py
+
+Institution detection signatures for American Express statements.
+"""
+
+from __future__ import annotations
+
+from banking_statements.processors.detection import InstitutionSignature
+
+AMERICAN_EXPRESS_CREDIT_CARD_SIGNATURES = (
+    InstitutionSignature(
+        institution="american_express",
+        required_markers=(
+            "American Express",
+            "Closing Date",
+            "Account Ending",
+            "Previous Balance",
+            "New Charges",
+        ),
+    ),
+)
+
+AMERICAN_EXPRESS_SIGNATURES = (*AMERICAN_EXPRESS_CREDIT_CARD_SIGNATURES,)
