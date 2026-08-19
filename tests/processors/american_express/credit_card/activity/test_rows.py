@@ -94,6 +94,63 @@ def test_parse_posting_date_marker() -> None:
     assert rows[1].date_is_posting is True
 
 
+def test_parse_pay_over_time_suffix_on_amount() -> None:
+    rows = parse_activity_rows(
+        make_text(
+            "Payments and Credits\n"
+            "Detail *Indicates posting date - denotes Pay Over Time and/or "
+            "Cash Advance activity\n"
+            "Credits Amount\n"
+            "10/25/20* SAMPLE CREDIT -$0.05t\n"
+            "New Charges\n"
+            "Detail *Indicates posting date - denotes Pay Over Time and/or "
+            "Cash Advance activity\n"
+            "Card Ending7-65432\n"
+            "Amount\n"
+            "10/25/20* SAMPLE DEBIT $0.05\n"
+            "t\n"
+            "Fees\n"
+        )
+    )
+
+    assert len(rows) == 2
+
+    assert rows[0].section is AmericanExpressCreditCardActivitySection.CREDITS
+    assert rows[0].date_text == "10/25/20"
+    assert rows[0].date_is_posting is True
+    assert rows[0].amount_text == "-$0.05"
+
+    assert rows[1].section is AmericanExpressCreditCardActivitySection.CHARGES
+    assert rows[1].date_text == "10/25/20"
+    assert rows[1].date_is_posting is True
+    assert rows[1].amount_text == "$0.05"
+
+
+def test_parse_pay_over_time_diamond_marker() -> None:
+    rows = parse_activity_rows(
+        make_text(
+            "New Charges\n"
+            "Detail ⧫ - denotes Pay Over Time and/or Cash Advance activity\n"
+            "Card Ending7-65432\n"
+            "Foreign\n"
+            "Spend Amount\n"
+            "03/20/26 SAMPLE MARKET $12.50⧫\n"
+            "Detail Continued ⧫ - denotes Pay Over Time and/or Cash Advance "
+            "activity\n"
+            "03/21/26 SAMPLE RESTAURANT $30.00⧫\n"
+            "Fees\n"
+        )
+    )
+
+    assert len(rows) == 2
+
+    assert rows[0].section is AmericanExpressCreditCardActivitySection.CHARGES
+    assert rows[0].amount_text == "$12.50"
+
+    assert rows[1].section is AmericanExpressCreditCardActivitySection.CHARGES
+    assert rows[1].amount_text == "$30.00"
+
+
 def test_parse_detail_continued() -> None:
     rows = parse_activity_rows(
         make_text(
@@ -106,6 +163,65 @@ def test_parse_detail_continued() -> None:
 
     assert len(rows) == 1
     assert rows[0].section is AmericanExpressCreditCardActivitySection.CHARGES
+
+
+def test_parse_pay_over_time_activity_layout() -> None:
+    rows = parse_activity_rows(
+        make_text(
+            "Payments and Credits\n"
+            "Detail *Indicates posting date - denotes Pay Over Time activity\n"
+            "Payments americanexpress.com/payovertimeinfo\n"
+            "11/11/18* ONLINE PAYMENT - THANK YOU -$360.21\n"
+            "Credits Amount\n"
+            "11/08/18 SAMPLE CREDIT -$377.79\n"
+            "New Charges\n"
+            "Detail - denotes Pay Over Time activity\n"
+            "Card Ending8-91006\n"
+            "Amount\n"
+            "10/29/18 SAMPLE SCHOOL $222.00\n"
+            "Detail Continued - denotes Pay Over Time activity\n"
+            "11/01/18 SAMPLE RESTAURANT $40.00\n"
+            "Fees\n"
+        )
+    )
+
+    assert len(rows) == 4
+
+    assert rows[0].section is AmericanExpressCreditCardActivitySection.PAYMENTS
+    assert rows[0].amount_text == "-$360.21"
+
+    assert rows[1].section is AmericanExpressCreditCardActivitySection.CREDITS
+    assert rows[1].amount_text == "-$377.79"
+
+    assert rows[2].section is AmericanExpressCreditCardActivitySection.CHARGES
+    assert rows[2].amount_text == "$222.00"
+
+    assert rows[3].section is AmericanExpressCreditCardActivitySection.CHARGES
+    assert rows[3].amount_text == "$40.00"
+
+
+def test_parse_pay_over_time_and_cash_advance_activity_layout() -> None:
+    rows = parse_activity_rows(
+        make_text(
+            "New Charges\n"
+            "Detail - denotes Pay Over Time and/or Cash Advance activity\n"
+            "Card Ending7-65432\n"
+            "Amount\n"
+            "03/20/26 SAMPLE MARKET $12.50\n"
+            "Detail Continued - denotes Pay Over Time and/or Cash Advance "
+            "activity\n"
+            "03/21/26 SAMPLE RESTAURANT $30.00\n"
+            "Fees\n"
+        )
+    )
+
+    assert len(rows) == 2
+
+    assert rows[0].section is AmericanExpressCreditCardActivitySection.CHARGES
+    assert rows[0].amount_text == "$12.50"
+
+    assert rows[1].section is AmericanExpressCreditCardActivitySection.CHARGES
+    assert rows[1].amount_text == "$30.00"
 
 
 def test_parse_undated_fee_and_interest_rows() -> None:
@@ -256,3 +372,56 @@ def test_parse_lodging_date_pair_as_continuation() -> None:
 
     assert rows[1].description == "SAMPLE MARKET"
     assert rows[1].amount_text == "$18.25"
+
+
+def test_parse_posting_date_with_pay_over_time_diamond_marker() -> None:
+    rows = parse_activity_rows(
+        make_text(
+            "New Charges\n"
+            "Detail *Indicates posting date ⧫ - denotes Pay Over Time and/or "
+            "Cash Advance activity\n"
+            "Card Ending7-65432\n"
+            "Amount\n"
+            "03/20/26 SAMPLE MARKET $12.50⧫\n"
+            "03/21/26* SAMPLE ADJUSTMENT $5.00\n"
+            "Fees\n"
+        )
+    )
+
+    assert len(rows) == 2
+
+    assert rows[0].section is AmericanExpressCreditCardActivitySection.CHARGES
+    assert rows[0].amount_text == "$12.50"
+
+    assert rows[1].section is AmericanExpressCreditCardActivitySection.CHARGES
+    assert rows[1].date_is_posting is True
+    assert rows[1].amount_text == "$5.00"
+
+
+def test_parse_pay_over_time_diamond_marker_without_denotes() -> None:
+    rows = parse_activity_rows(
+        make_text(
+            "New Charges\n"
+            "Detail *Indicates posting date ⧫ - Pay Over Time and/or "
+            "Cash Advance activity\n"
+            "Card Ending7-65432\n"
+            "03/20/26 SAMPLE MARKET $12.50⧫\n"
+            "Detail ⧫ - Pay Over Time and/or Cash Advance activity\n"
+            "03/21/26 SAMPLE CAFE $20.00⧫\n"
+            "Detail Continued ⧫ - Pay Over Time and/or Cash Advance "
+            "activity\n"
+            "03/22/26 SAMPLE RESTAURANT $30.00⧫\n"
+            "Fees\n"
+        )
+    )
+
+    assert len(rows) == 3
+
+    assert rows[0].section is AmericanExpressCreditCardActivitySection.CHARGES
+    assert rows[0].amount_text == "$12.50"
+
+    assert rows[1].section is AmericanExpressCreditCardActivitySection.CHARGES
+    assert rows[1].amount_text == "$20.00"
+
+    assert rows[2].section is AmericanExpressCreditCardActivitySection.CHARGES
+    assert rows[2].amount_text == "$30.00"

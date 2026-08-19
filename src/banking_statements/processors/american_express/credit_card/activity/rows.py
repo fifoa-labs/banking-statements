@@ -46,7 +46,8 @@ _DATE_ROW_PATTERN = re.compile(
     r"(?P<trailing_star>\*)?\s+"
     r"(?P<description>.+?)\s+"
     r"(?P<amount>[+-]?\$?[\d,]+\.\d{2})"
-    r"(?P<credit>\s+CR)?$",
+    r"(?P<credit>\s+CR)?"
+    r"(?P<pay_over_time>[t⧫])?$",
 )
 
 _DATE_PREFIX_PATTERN = re.compile(
@@ -74,8 +75,32 @@ _YEAR_TOTALS_PATTERN = re.compile(
 _DETAIL_MARKERS = (
     "Detail",
     "Detail *Indicates posting date",
+    (
+        "Detail *Indicates posting date ⧫ - denotes Pay Over Time and/or "
+        "Cash Advance activity"
+    ),
+    (
+        "Detail *Indicates posting date ⧫ - Pay Over Time and/or "
+        "Cash Advance activity"
+    ),
+    "Detail *Indicates posting date - denotes Pay Over Time activity",
+    (
+        "Detail *Indicates posting date - denotes Pay Over Time and/or "
+        "Cash Advance activity"
+    ),
+    "Detail - denotes Pay Over Time activity",
+    "Detail - denotes Pay Over Time and/or Cash Advance activity",
+    "Detail ⧫ - denotes Pay Over Time and/or Cash Advance activity",
+    "Detail ⧫ - Pay Over Time and/or Cash Advance activity",
     "Detail Continued",
     "Detail Continued *Indicates posting date",
+    "Detail Continued - denotes Pay Over Time activity",
+    "Detail Continued - denotes Pay Over Time and/or Cash Advance activity",
+    (
+        "Detail Continued ⧫ - denotes Pay Over Time and/or Cash Advance "
+        "activity"
+    ),
+    "Detail Continued ⧫ - Pay Over Time and/or Cash Advance activity",
 )
 
 _IGNORED_LINES = frozenset(
@@ -139,7 +164,9 @@ def _section_marker(
     line: str,
 ) -> AmericanExpressCreditCardActivitySection | None:
     """Return a direct activity-section marker when present."""
-    if line in {"Payments", "Payments Amount"}:
+    if line in {"Payments", "Payments Amount"} or line.startswith(
+        "Payments americanexpress.com/"
+    ):
         return AmericanExpressCreditCardActivitySection.PAYMENTS
 
     if line in {"Credits", "Credits Amount"}:

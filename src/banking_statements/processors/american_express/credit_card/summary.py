@@ -35,6 +35,22 @@ _SUMMARY_PATTERNS = {
 }
 
 
+_ACCOUNT_TOTAL_PATTERN = re.compile(
+    r"Account Total"
+    r".*?"
+    r"Previous Balance\s+"
+    rf"(?P<opening_prefix_credit>CR\s*)?"
+    rf"(?P<opening_amount>{_AMOUNT_TEXT})"
+    rf"(?P<opening_suffix_credit>\s*CR)?"
+    r".*?"
+    r"New Balance\s+"
+    rf"(?P<closing_prefix_credit>CR\s*)?"
+    rf"(?P<closing_amount>{_AMOUNT_TEXT})"
+    rf"(?P<closing_suffix_credit>\s*CR)?",
+    re.DOTALL,
+)
+
+
 def _parse_summary_amount(
     text: str,
     field: str,
@@ -64,10 +80,45 @@ def _parse_summary_amount(
     return amount
 
 
+def _parse_account_total_amount(
+    match: re.Match[str],
+    field: str,
+) -> Decimal:
+    """Parse one amount from an American Express Account Total summary."""
+    amount_text = match.group(f"{field}_amount")
+
+    if amount_text.startswith("+"):
+        amount_text = amount_text[1:]
+
+    amount = to_decimal(amount_text)
+
+    if (
+        match.group(f"{field}_prefix_credit") is not None
+        or match.group(f"{field}_suffix_credit") is not None
+    ):
+        return -abs(amount)
+
+    return amount
+
+
 def parse_balance_summary(
     text: StatementText,
 ) -> StatementBalanceSummary:
     """Parse reported American Express credit-card balances."""
+    account_total_match = _ACCOUNT_TOTAL_PATTERN.search(text.text)
+
+    if account_total_match is not None:
+        return StatementBalanceSummary(
+            opening_balance=_parse_account_total_amount(
+                account_total_match,
+                "opening",
+            ),
+            closing_balance=_parse_account_total_amount(
+                account_total_match,
+                "closing",
+            ),
+        )
+
     return StatementBalanceSummary(
         opening_balance=_parse_summary_amount(
             text.text,

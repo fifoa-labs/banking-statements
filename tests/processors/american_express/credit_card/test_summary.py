@@ -85,3 +85,67 @@ def test_parse_balance_summary_accepts_suffix_credit_balance() -> None:
 
     assert summary.opening_balance == Decimal("25.00")
     assert summary.closing_balance == Decimal("-12.34")
+
+
+def test_parse_balance_summary_prefers_account_total() -> None:
+    summary = parse_balance_summary(
+        make_text(
+            "Account Summary\n"
+            "Pay In Full Portion\n"
+            "Previous Balance $500.00\n"
+            "Payments/Credits -$500.00\n"
+            "New Charges +$300.00\n"
+            "New Balance = $300.00\n"
+            "Pay Over Time Portion\n"
+            "Previous Balance $400.00\n"
+            "Payments/Credits -$400.00\n"
+            "New Charges +$700.00\n"
+            "New Balance = $700.00\n"
+            "Account Total\n"
+            "Minimum Payment Due Previous Balance $900.00\n"
+            "Payments/Credits -$900.00\n"
+            "New Charges +$1,000.00\n"
+            "New Balance $1,000.00\n"
+        )
+    )
+
+    assert summary.opening_balance == Decimal("900.00")
+    assert summary.closing_balance == Decimal("1000.00")
+
+
+def test_parse_account_total_handles_credit_balances() -> None:
+    summary = parse_balance_summary(
+        make_text(
+            "Account Summary\n"
+            "Pay In Full Portion\n"
+            "Previous Balance $100.00\n"
+            "New Balance $50.00\n"
+            "Account Total\n"
+            "Minimum Payment Due Previous Balance CR$25.00\n"
+            "Payments/Credits $0.00\n"
+            "New Charges $0.00\n"
+            "New Balance $12.50 CR\n"
+        )
+    )
+
+    assert summary.opening_balance == Decimal("-25.00")
+    assert summary.closing_balance == Decimal("-12.50")
+
+
+def test_parse_account_total_handles_explicit_plus_amounts() -> None:
+    summary = parse_balance_summary(
+        make_text(
+            "Account Summary\n"
+            "Pay In Full Portion\n"
+            "Previous Balance $100.00\n"
+            "New Balance $50.00\n"
+            "Account Total\n"
+            "Minimum Payment Due Previous Balance +$125.00\n"
+            "Payments/Credits $0.00\n"
+            "New Charges $0.00\n"
+            "New Balance +$150.00\n"
+        )
+    )
+
+    assert summary.opening_balance == Decimal("125.00")
+    assert summary.closing_balance == Decimal("150.00")

@@ -211,7 +211,7 @@ prep-private-data: ## Create private banking statement archive directories
 # 🔎 STATEMENT INSPECTION
 # --------------------------------------------
 
-.PHONY: inspect-statement smoke-archive
+.PHONY: inspect-statement smoke-archive find-notices open-notices delete-notices
 
 inspect-statement: ## Inspect PDF text: make inspect-statement file=... [page=] [head=]
 	@if [ -z "$(file)" ]; then \
@@ -227,16 +227,39 @@ inspect-statement: ## Inspect PDF text: make inspect-statement file=... [page=] 
 	fi; \
 	eval uv run python scripts/inspect_statement.py $$args
 
-smoke-archive: ## Smoke-test statements: make smoke-archive folder=... [limit=] [continue=1] [traceback=1]
+smoke-archive: ## Smoke-test statements: make smoke-archive folder=... [from=] [limit=] [continue=1] [traceback=1]
 	@if [ -z "$(folder)" ]; then \
-		echo "Usage: make smoke-archive folder=path/to/statements [limit=1] [continue=1] [traceback=1]"; \
+		echo "Usage: make smoke-archive folder=path/to/statements [from=1] [limit=1] [continue=1] [traceback=1]"; \
 		exit 1; \
 	fi
 	@uv run python scripts/archive_smoke.py \
 		"$(folder)" \
+		$(if $(from),--from "$(from)",) \
 		$(if $(limit),--limit "$(limit)",) \
 		$(if $(continue),--continue-on-error,) \
 		$(if $(traceback),--traceback,)
+
+find-notices: ## Find notice PDFs: make find-notices [folder=...] [phrase="..."]
+	@uv run python scripts/find_notices.py \
+		"$(or $(folder),private-data/statements)" \
+		$(if $(phrase),--phrase "$(phrase)",)
+
+open-notices: ## Open notice PDFs in Preview: make open-notices [folder=...] [phrase="..."]
+	@uv run python scripts/find_notices.py \
+		"$(or $(folder),private-data/statements)" \
+		$(if $(phrase),--phrase "$(phrase)",) \
+		--open
+
+delete-notices: ## Delete notice PDFs: make delete-notices confirm=1 [folder=...] [phrase="..."]
+	@if [ "$(confirm)" != "1" ]; then \
+		echo "Refusing to delete matching PDFs without confirm=1."; \
+		echo "Run 'make find-notices' first to review the matches."; \
+		exit 1; \
+	fi
+	@uv run python scripts/find_notices.py \
+		"$(or $(folder),private-data/statements)" \
+		$(if $(phrase),--phrase "$(phrase)",) \
+		--delete
 
 # ============================================
 # 🌲 FILE TREE / INSPECTION
