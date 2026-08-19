@@ -425,3 +425,36 @@ def test_parse_pay_over_time_diamond_marker_without_denotes() -> None:
 
     assert rows[2].section is AmericanExpressCreditCardActivitySection.CHARGES
     assert rows[2].amount_text == "$30.00"
+
+
+def test_parse_business_pay_over_time_activity_layout() -> None:
+    rows = parse_activity_rows(
+        make_text(
+            "New Charges\n"
+            "Detail *Indicates posting date ⧫ - Pay Over Time activity\n"
+            "Card Ending7-65432\n"
+            "03/20/26 SAMPLE MARKET $12.50⧫\n"
+            "Detail Continued *Indicates posting date ⧫ - Pay Over Time "
+            "activity\n"
+            "03/21/26 SAMPLE RESTAURANT $30.00⧫\n"
+            "Detail ⧫ - Pay Over Time activity\n"
+            "03/22/26 SAMPLE CAFE $20.00⧫\n"
+            "Detail Continued ⧫ - Pay Over Time activity\n"
+            "03/23/26 SAMPLE STORE $15.00⧫\n"
+            "Fees\n"
+        )
+    )
+
+    assert len(rows) == 4
+
+    assert rows[0].section is AmericanExpressCreditCardActivitySection.CHARGES
+    assert rows[0].amount_text == "$12.50"
+
+    assert rows[1].section is AmericanExpressCreditCardActivitySection.CHARGES
+    assert rows[1].amount_text == "$30.00"
+
+    assert rows[2].section is AmericanExpressCreditCardActivitySection.CHARGES
+    assert rows[2].amount_text == "$20.00"
+
+    assert rows[3].section is AmericanExpressCreditCardActivitySection.CHARGES
+    assert rows[3].amount_text == "$15.00"

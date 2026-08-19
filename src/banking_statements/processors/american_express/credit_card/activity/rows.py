@@ -75,6 +75,12 @@ _YEAR_TOTALS_PATTERN = re.compile(
 _DETAIL_MARKERS = (
     "Detail",
     "Detail *Indicates posting date",
+    "Detail *Indicates posting date - denotes Pay Over Time activity",
+    (
+        "Detail *Indicates posting date - denotes Pay Over Time and/or "
+        "Cash Advance activity"
+    ),
+    "Detail *Indicates posting date ⧫ - Pay Over Time activity",
     (
         "Detail *Indicates posting date ⧫ - denotes Pay Over Time and/or "
         "Cash Advance activity"
@@ -83,19 +89,17 @@ _DETAIL_MARKERS = (
         "Detail *Indicates posting date ⧫ - Pay Over Time and/or "
         "Cash Advance activity"
     ),
-    "Detail *Indicates posting date - denotes Pay Over Time activity",
-    (
-        "Detail *Indicates posting date - denotes Pay Over Time and/or "
-        "Cash Advance activity"
-    ),
     "Detail - denotes Pay Over Time activity",
     "Detail - denotes Pay Over Time and/or Cash Advance activity",
+    "Detail ⧫ - Pay Over Time activity",
     "Detail ⧫ - denotes Pay Over Time and/or Cash Advance activity",
     "Detail ⧫ - Pay Over Time and/or Cash Advance activity",
     "Detail Continued",
     "Detail Continued *Indicates posting date",
+    "Detail Continued *Indicates posting date ⧫ - Pay Over Time activity",
     "Detail Continued - denotes Pay Over Time activity",
     "Detail Continued - denotes Pay Over Time and/or Cash Advance activity",
+    "Detail Continued ⧫ - Pay Over Time activity",
     (
         "Detail Continued ⧫ - denotes Pay Over Time and/or Cash Advance "
         "activity"
