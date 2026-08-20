@@ -21,6 +21,19 @@ Examples:
             private-data/statements/chase/credit-card/20260803-statements-7244-.pdf \
             --show-transactions
 
+    Start from the 337th discovered statement:
+
+        uv run python -m scripts.archive_smoke \
+            private-data/statements/amex/credit-card \
+            --from 337
+
+    Process three statements beginning at position 337:
+
+        uv run python -m scripts.archive_smoke \
+            private-data/statements/amex/credit-card \
+            --from 337 \
+            --limit 3
+
     Process only the first 10 statements:
 
         uv run python -m scripts.archive_smoke \
@@ -102,9 +115,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="PDF file or directory containing statement PDFs.",
     )
     parser.add_argument(
+        "--from",
+        type=int,
+        dest="start",
+        default=1,
+        help=(
+            "Start at the 1-based position in the discovered statement archive."  # noqa: E501
+        ),
+    )
+    parser.add_argument(
         "--limit",
         type=int,
-        help="Process only the first N discovered statements.",
+        help="Process only N statements beginning at --from.",
     )
     parser.add_argument(
         "--continue-on-error",
@@ -163,9 +185,31 @@ def file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def run_archive_smoke(
+def select_statements(
     statements: Sequence[Path],
     *,
+    start: int,
+    limit: int | None,
+) -> tuple[tuple[int, Path], ...]:
+    """Return selected statements with their original archive positions."""
+    selected = statements[start - 1 :]
+
+    if limit is not None:
+        selected = selected[:limit]
+
+    return tuple(
+        enumerate(
+            selected,
+            start=start,
+        )
+    )
+
+
+def run_archive_smoke(  # noqa: PLR0913
+    statements: Sequence[Path],
+    *,
+    start: int,
+    limit: int | None,
     continue_on_error: bool,
     show_traceback: bool,
     show_transactions: bool,
@@ -179,10 +223,13 @@ def run_archive_smoke(
     failures = 0
     total = len(statements)
 
-    for index, path in enumerate(
+    selected = select_statements(
         statements,
-        start=1,
-    ):
+        start=start,
+        limit=limit,
+    )
+
+    for index, path in selected:
         label = f"[{index:02d}/{total:02d}]"
 
         try:
@@ -354,6 +401,9 @@ def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
 
+    if args.start < 1:
+        parser.error("--from must be at least 1")
+
     if args.limit is not None and args.limit < 1:
         parser.error("--limit must be at least 1")
 
@@ -364,14 +414,19 @@ def main() -> None:
     except ValueError as exc:
         parser.error(str(exc))
 
-    if args.limit is not None:
-        statements = statements[: args.limit]
-
     if not statements:
         parser.error(f"no PDF statements found under: {args.source}")
 
+    if args.start > len(statements):
+        parser.error(
+            "--from must not exceed the number of discovered statements "
+            f"({len(statements)})"
+        )
+
     failures = run_archive_smoke(
         statements,
+        start=args.start,
+        limit=args.limit,
         continue_on_error=args.continue_on_error,
         show_traceback=args.traceback,
         show_transactions=args.show_transactions,

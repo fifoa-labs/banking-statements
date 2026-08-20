@@ -6,6 +6,13 @@ Default institution detector and processor registry composition.
 
 from __future__ import annotations
 
+from banking_statements.processors.american_express import (
+    AMERICAN_EXPRESS_SIGNATURES,
+    AmericanExpressBusinessCheckingProcessor,
+    AmericanExpressBusinessLineOfCreditProcessor,
+    AmericanExpressCreditCardProcessor,
+    AmericanExpressPersonalLoanProcessor,
+)
 from banking_statements.processors.chase import (
     CHASE_SIGNATURES,
     ChaseCheckingProcessor,
@@ -30,6 +37,7 @@ def build_default_institution_detector() -> InstitutionDetector:
         (
             *CHASE_SIGNATURES,
             *WELLS_FARGO_SIGNATURES,
+            *AMERICAN_EXPRESS_SIGNATURES,
         )
     )
 
@@ -46,5 +54,9 @@ def build_default_processor_registry() -> ProcessorRegistry:
             WellsFargoBusinessCheckingProcessor(),
             WellsFargoBusinessCreditCardProcessor(),
             WellsFargoBusinessLineOfCreditProcessor(),
+            AmericanExpressCreditCardProcessor(),
+            AmericanExpressBusinessCheckingProcessor(),
+            AmericanExpressBusinessLineOfCreditProcessor(),
+            AmericanExpressPersonalLoanProcessor(),
         )
     )

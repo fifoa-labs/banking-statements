@@ -33,6 +33,7 @@ _DEBT_ACCOUNT_TYPES = frozenset(
     {
         AccountType.CREDIT_CARD,
         AccountType.LINE_OF_CREDIT,
+        AccountType.LOAN,
     }
 )
 
