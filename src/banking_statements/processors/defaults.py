@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from banking_statements.processors.american_express import (
     AMERICAN_EXPRESS_SIGNATURES,
+    AmericanExpressBusinessCheckingProcessor,
     AmericanExpressCreditCardProcessor,
 )
 from banking_statements.processors.chase import (
@@ -52,5 +53,6 @@ def build_default_processor_registry() -> ProcessorRegistry:
             WellsFargoBusinessCreditCardProcessor(),
             WellsFargoBusinessLineOfCreditProcessor(),
             AmericanExpressCreditCardProcessor(),
+            AmericanExpressBusinessCheckingProcessor(),
         )
     )

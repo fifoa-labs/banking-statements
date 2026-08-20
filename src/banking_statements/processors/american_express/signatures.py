@@ -21,4 +21,32 @@ AMERICAN_EXPRESS_CREDIT_CARD_SIGNATURES = (
     ),
 )
 
-AMERICAN_EXPRESS_SIGNATURES = (*AMERICAN_EXPRESS_CREDIT_CARD_SIGNATURES,)
+AMERICAN_EXPRESS_BUSINESS_CHECKING_SIGNATURES = (
+    InstitutionSignature(
+        institution="american_express",
+        required_markers=(
+            "Business Checking Account Statement",
+            "StatementPeriod",
+            "AccountEnding",
+            "BeginningBalance",
+            "EndingBalance",
+            "Account Activity",
+        ),
+    ),
+    InstitutionSignature(
+        institution="american_express",
+        required_markers=(
+            "Business Checking Account Statement",
+            "Statement Date:",
+            "Account Ending:",
+            "Beginning Balance as of",
+            "Ending Balance as of",
+            "Account Activity",
+        ),
+    ),
+)
+
+AMERICAN_EXPRESS_SIGNATURES = (
+    *AMERICAN_EXPRESS_CREDIT_CARD_SIGNATURES,
+    *AMERICAN_EXPRESS_BUSINESS_CHECKING_SIGNATURES,
+)
