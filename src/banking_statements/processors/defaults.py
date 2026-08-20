@@ -15,6 +15,7 @@ from banking_statements.processors.american_express import (
 )
 from banking_statements.processors.capital_one import (
     CAPITAL_ONE_SIGNATURES,
+    CapitalOneBusinessCreditCardProcessor,
     CapitalOneCreditCardProcessor,
 )
 from banking_statements.processors.chase import (
@@ -72,5 +73,6 @@ def build_default_processor_registry() -> ProcessorRegistry:
             DiscoverCheckingProcessor(),
             DiscoverCreditCardProcessor(),
             CapitalOneCreditCardProcessor(),
+            CapitalOneBusinessCreditCardProcessor(),
         )
     )

@@ -23,4 +23,43 @@ CAPITAL_ONE_CREDIT_CARD_SIGNATURES = (
     ),
 )
 
-CAPITAL_ONE_SIGNATURES = (*CAPITAL_ONE_CREDIT_CARD_SIGNATURES,)
+CAPITAL_ONE_BUSINESS_CREDIT_CARD_SIGNATURES = (
+    InstitutionSignature(
+        institution="capital_one",
+        required_markers=(
+            "Spark® Visa Signature Business Account Ending in",
+            "days in Billing Cycle",
+            "Account Summary",
+            "Date Description Amount",
+            "Fees",
+            "Capital One",
+        ),
+    ),
+    InstitutionSignature(
+        institution="capital_one",
+        required_markers=(
+            "Spark Cash credit card | Visa Signature Business ending in",
+            "days in Billing Cycle",
+            "Account Summary",
+            "Trans Date Post Date Description Amount",
+            "Fees",
+            "Capital One",
+        ),
+    ),
+    InstitutionSignature(
+        institution="capital_one",
+        required_markers=(
+            "Venture X Business card | Visa Infinite Business ending in",
+            "days in Billing Cycle",
+            "Account Summary",
+            "Trans Date Post Date Description Amount",
+            "Fees",
+            "Capital One",
+        ),
+    ),
+)
+
+CAPITAL_ONE_SIGNATURES = (
+    *CAPITAL_ONE_CREDIT_CARD_SIGNATURES,
+    *CAPITAL_ONE_BUSINESS_CREDIT_CARD_SIGNATURES,
+)
