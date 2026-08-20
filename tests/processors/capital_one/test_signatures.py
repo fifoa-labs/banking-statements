@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from banking_statements.processors.capital_one import (
     CAPITAL_ONE_BUSINESS_CREDIT_CARD_SIGNATURES,
+    CAPITAL_ONE_CHECKING_SIGNATURES,
     CAPITAL_ONE_CREDIT_CARD_SIGNATURES,
     CAPITAL_ONE_SIGNATURES,
 )
@@ -66,8 +67,26 @@ def test_capital_one_business_credit_card_signatures_are_stable() -> None:
     )
 
 
+def test_capital_one_checking_signature_is_stable() -> None:
+    assert len(CAPITAL_ONE_CHECKING_SIGNATURES) == 1
+
+    signature = CAPITAL_ONE_CHECKING_SIGNATURES[0]
+
+    assert signature.institution == "capital_one"
+    assert signature.required_markers == (
+        "STATEMENT PERIOD",
+        "Account Summary Cashflow Summary",
+        "360 Checking - ",
+        "DATE DESCRIPTION CATEGORY AMOUNT BALANCE",
+        "Opening Balance",
+        "Closing Balance",
+        "capitalone.com",
+    )
+
+
 def test_capital_one_signatures_include_all_account_families() -> None:
     assert (
         *CAPITAL_ONE_CREDIT_CARD_SIGNATURES,
         *CAPITAL_ONE_BUSINESS_CREDIT_CARD_SIGNATURES,
+        *CAPITAL_ONE_CHECKING_SIGNATURES,
     ) == CAPITAL_ONE_SIGNATURES

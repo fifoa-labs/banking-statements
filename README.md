@@ -23,13 +23,14 @@ formats, ambiguous processor matches, malformed recognized data, unknown
 statement behavior, and reconciliation failures during archive validation are
 surfaced explicitly rather than silently ignored or guessed around.
 
-Version `0.6.0` expands the package to four supported institutions:
+Version `0.7.0` expands the package to five supported institutions:
 
 ```text
 Chase
 Wells Fargo
 American Express
 Discover
+Capital One
 ```
 
 Implemented processors cover consumer and business deposit accounts, credit
@@ -54,7 +55,7 @@ layer, or Beancount-specific importer.
 Current release:
 
 ```text
-banking-statements 0.6.0
+banking-statements 0.7.0
 ```
 
 Supported Python versions:
@@ -122,6 +123,36 @@ Discover
         fees
         interest
         observed formats spanning 2019–2025
+
+Capital One
+    credit card
+        Venture X consumer credit-card statements
+        transaction and posting-date activity
+        payments and credits
+        purchases
+        fees
+        interest
+        foreign-currency detail preservation
+        observed formats spanning 2023–2026
+
+    business credit card
+        Spark business credit-card statements
+        Venture X Business statements
+        legacy flattened two-column transaction layouts
+        current transaction/post-date layouts
+        payments and credits
+        purchases
+        fees
+        interest where reported
+        observed formats spanning 2019–2026
+
+    checking
+        360 Checking statements
+        monthly and quarterly statement periods
+        running-balance transaction validation
+        wrapped transfer descriptions and reference lines
+        zero-activity statements
+        observed formats spanning 2022–2026
 ```
 
 Current normalized domain includes:
@@ -153,7 +184,7 @@ LOAN
 The complete private statement archive currently validates:
 
 ```text
-1963 / 1963 PASS
+2162 / 2162 PASS
 reconciliation=PASS
 difference=0.00
 ```
@@ -170,6 +201,18 @@ Discover checking
 
 Discover credit card
     70 / 70 PASS
+
+Capital One
+    199 / 199 PASS
+
+    consumer credit card
+        38 / 38 PASS
+
+    business credit card
+        86 / 86 PASS
+
+    checking
+        75 / 75 PASS
 ```
 
 Quality gates include Ruff, strict mypy, pytest, 100% branch coverage,
@@ -201,8 +244,8 @@ uv sync --dev
 ## Basic Usage
 
 The package exposes generic domain primitives plus implemented statement
-processors for supported Chase, Wells Fargo, American Express, and Discover
-statement families.
+processors for supported Chase, Wells Fargo, American Express, Discover, and
+Capital One statement families.
 
 ```python
 from datetime import date
@@ -244,6 +287,10 @@ chase.heloc.v1
 
 discover.checking.v1
 discover.credit_card.v1
+
+capital_one.credit_card.v1
+capital_one.business_credit_card.v1
+capital_one.checking.v1
 ```
 
 Processor identity is part of source evidence and should remain stable for a
@@ -402,8 +449,8 @@ text alone is insufficient to preserve financial meaning.
 
 ## American Express Support
 
-American Express support was introduced for `0.5.0` and is included in
-`0.6.0`.
+American Express support was introduced for `0.5.0` and remains included in
+`0.7.0`.
 
 Supported account families are:
 
@@ -576,6 +623,152 @@ The processor also tolerates a proven PDF extraction artifact where text from
 an adjacent rewards column can appear after a complete transaction amount.
 That adjacent-column text is preserved in raw source evidence but is not
 silently appended to the transaction description.
+
+## Capital One Credit Card Support
+
+Capital One consumer credit-card statements are handled through:
+
+```text
+capital_one.credit_card.v1
+```
+
+The private Capital One consumer credit-card archive currently validates:
+
+```text
+38 / 38 PASS
+reconciliation=PASS
+difference=0.00
+```
+
+Observed Venture X statement formats span 2023 through 2026.
+
+The processor supports:
+
+```text
+statement identity and billing periods
+opening and closing balances
+cardholder-scoped payments and credits
+purchases
+fees
+interest
+transaction and posting dates
+foreign-currency continuation detail
+cross-year transaction-date resolution
+```
+
+For dated activity, the normalized transaction date prefers the statement's
+reported posting date. This matches the account's billing-cycle behavior,
+including transactions whose transaction date precedes the nominal statement
+period but whose posting date falls inside the current cycle.
+
+Foreign-currency detail such as the original amount, currency code, and
+exchange rate is preserved in raw source evidence without being silently
+appended to the merchant description.
+
+Fee rows are independently checked against the statement's reported period fee
+total. Interest is normalized once from the statement's period total so
+category detail does not create duplicate economic activity.
+
+## Capital One Business Credit Card Support
+
+Capital One business credit-card statements are handled through:
+
+```text
+capital_one.business_credit_card.v1
+```
+
+The private business credit-card archive currently validates:
+
+```text
+86 / 86 PASS
+reconciliation=PASS
+difference=0.00
+```
+
+That corpus consists of:
+
+```text
+Spark
+    82 / 82 PASS
+
+Venture X Business
+    4 / 4 PASS
+```
+
+Observed formats span 2019 through 2026.
+
+The processor supports multiple proven historical grammars within the same
+Capital One business-card family.
+
+Legacy Spark statements can flatten two visual transaction columns into one
+physical extracted-text line. The processor reconstructs the independent
+date-led transaction segments before normalization rather than treating the
+flattened line as one activity record.
+
+Current Spark and Venture X Business statements use transaction/post-date
+activity tables. Both remain inside the same processor because the corpus
+demonstrates a common business credit-card family with explicit product-aware
+grammar boundaries.
+
+Venture X Business statements may omit interest sections entirely. The parser
+does not invent missing interest behavior and instead requires only the
+sections proven for the matched product grammar.
+
+## Capital One Checking Support
+
+Capital One 360 Checking statements are handled through:
+
+```text
+capital_one.checking.v1
+```
+
+The private checking archive currently validates:
+
+```text
+75 / 75 PASS
+reconciliation=PASS
+difference=0.00
+```
+
+The corpus contains two private 360 Checking accounts and includes both monthly
+and quarterly reporting behavior.
+
+Supported behavior includes:
+
+```text
+full account identity
+statement-period parsing
+monthly statement periods
+quarterly 90/91/92-day statement periods
+beginning and ending balances
+deposits and credits
+withdrawals and debits
+transfers
+wrapped transfer descriptions
+reference-token continuation lines
+zero-activity statements
+cross-year transaction dates
+running-balance validation
+```
+
+Capital One checking rows expose a running balance. The processor uses that
+reported balance as an additional parser invariant: reconstructed activity must
+produce the exact balance transition reported by the statement before the
+normalized statement reaches package-level reconciliation.
+
+This provides two independent checks:
+
+```text
+transaction row
+    → running-balance validation
+
+complete statement
+    → asset-account reconciliation
+```
+
+The two observed account archives share the same 360 Checking grammar, so they
+are handled by one processor rather than duplicated account-specific
+implementations.
 
 ## Statement Balances
 
@@ -930,13 +1123,18 @@ American Express
 Discover
     checking
     credit card
+
+Capital One
+    credit card
+    business credit card
+    checking
 ```
 
 A bank, account family, or statement format is listed as supported only after
 its processor has been implemented and validated against real statement
 evidence.
 
-The complete private development archive currently contains 1963 supported
+The complete private development archive currently contains 2162 supported
 statements, all of which pass extraction, institution detection, processor
 selection, parsing, normalization, and strict reconciliation with zero
 difference.
@@ -955,6 +1153,7 @@ private-data/
     ├── wellsfargo/
     ├── american-express/
     ├── discover/
+    ├── capitalone/
     └── ...
 ```
 
@@ -1352,8 +1551,8 @@ package without becoming responsibilities of the statement parser itself.
 Current milestone:
 
 ```text
-0.6.0
-    four-institution statement support
+0.7.0
+    five-institution statement support
 
     Chase
         credit card
@@ -1378,18 +1577,24 @@ Current milestone:
         checking
         credit card
 
+    Capital One
+        credit card
+        business credit card
+        checking
+
     account-type-aware reconciliation
     layout-aware PDF evidence
     strict institution detection
     deterministic processor selection
+    running-balance validation where exposed by statement evidence
     100% branch coverage
-    1963 / 1963 private statements PASS
+    2162 / 2162 private statements PASS
 ```
 
 Next evidence-driven institution target:
 
 ```text
-Capital One
+To be selected from the next private statement corpus.
 ```
 
 Expected later phases:

@@ -59,7 +59,23 @@ CAPITAL_ONE_BUSINESS_CREDIT_CARD_SIGNATURES = (
     ),
 )
 
+CAPITAL_ONE_CHECKING_SIGNATURES = (
+    InstitutionSignature(
+        institution="capital_one",
+        required_markers=(
+            "STATEMENT PERIOD",
+            "Account Summary Cashflow Summary",
+            "360 Checking - ",
+            "DATE DESCRIPTION CATEGORY AMOUNT BALANCE",
+            "Opening Balance",
+            "Closing Balance",
+            "capitalone.com",
+        ),
+    ),
+)
+
 CAPITAL_ONE_SIGNATURES = (
     *CAPITAL_ONE_CREDIT_CARD_SIGNATURES,
     *CAPITAL_ONE_BUSINESS_CREDIT_CARD_SIGNATURES,
+    *CAPITAL_ONE_CHECKING_SIGNATURES,
 )
