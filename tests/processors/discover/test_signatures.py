@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from banking_statements.processors.discover import (
     DISCOVER_CHECKING_SIGNATURES,
+    DISCOVER_CREDIT_CARD_SIGNATURES,
     DISCOVER_SIGNATURES,
 )
 
@@ -48,5 +49,34 @@ def test_discover_checking_signatures_are_stable() -> None:
     )
 
 
+def test_discover_credit_card_signatures_are_stable() -> None:
+    assert len(DISCOVER_CREDIT_CARD_SIGNATURES) == 2
+
+    legacy, current = DISCOVER_CREDIT_CARD_SIGNATURES
+
+    assert legacy.institution == "discover"
+    assert legacy.required_markers == (
+        "Discover it® Card",
+        "Account number ending in",
+        "Open Date:",
+        "Close Date:",
+        "ACCOUNT SUMMARY",
+        "Transactions",
+    )
+
+    assert current.institution == "discover"
+    assert current.required_markers == (
+        "DISCOVER IT® CARD ENDING IN",
+        "AccountSummary",
+        "PaymentInformation",
+        "PreviousBalance",
+        "NewBalance",
+        "Transactions",
+    )
+
+
 def test_discover_signatures_include_all_account_families() -> None:
-    assert (*DISCOVER_CHECKING_SIGNATURES,) == DISCOVER_SIGNATURES
+    assert (
+        *DISCOVER_CHECKING_SIGNATURES,
+        *DISCOVER_CREDIT_CARD_SIGNATURES,
+    ) == DISCOVER_SIGNATURES

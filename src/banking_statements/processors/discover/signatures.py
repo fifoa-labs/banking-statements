@@ -44,4 +44,32 @@ DISCOVER_CHECKING_SIGNATURES = (
     ),
 )
 
-DISCOVER_SIGNATURES = (*DISCOVER_CHECKING_SIGNATURES,)
+DISCOVER_CREDIT_CARD_SIGNATURES = (
+    InstitutionSignature(
+        institution="discover",
+        required_markers=(
+            "Discover it® Card",
+            "Account number ending in",
+            "Open Date:",
+            "Close Date:",
+            "ACCOUNT SUMMARY",
+            "Transactions",
+        ),
+    ),
+    InstitutionSignature(
+        institution="discover",
+        required_markers=(
+            "DISCOVER IT® CARD ENDING IN",
+            "AccountSummary",
+            "PaymentInformation",
+            "PreviousBalance",
+            "NewBalance",
+            "Transactions",
+        ),
+    ),
+)
+
+DISCOVER_SIGNATURES = (
+    *DISCOVER_CHECKING_SIGNATURES,
+    *DISCOVER_CREDIT_CARD_SIGNATURES,
+)

@@ -23,6 +23,7 @@ from banking_statements.processors.detection import InstitutionDetector
 from banking_statements.processors.discover import (
     DISCOVER_SIGNATURES,
     DiscoverCheckingProcessor,
+    DiscoverCreditCardProcessor,
 )
 from banking_statements.processors.registry import ProcessorRegistry
 from banking_statements.processors.wellsfargo import (
@@ -64,5 +65,6 @@ def build_default_processor_registry() -> ProcessorRegistry:
             AmericanExpressBusinessLineOfCreditProcessor(),
             AmericanExpressPersonalLoanProcessor(),
             DiscoverCheckingProcessor(),
+            DiscoverCreditCardProcessor(),
         )
     )

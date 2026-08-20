@@ -7,28 +7,35 @@
 [![License](https://img.shields.io/pypi/l/banking-statements.svg)](https://github.com/fifoa-labs/banking-statements/blob/main/LICENSE)
 
 Deterministic parsing, normalization, and validation of U.S. banking statements
-across institutions and statement formats.
+across institutions, account families, and historical statement formats.
 
 `banking-statements` is a typed Python library for turning supported bank
 statements into normalized Python domain objects while preserving the source
 evidence needed to understand how each result was produced.
 
 The library is designed around isolated statement processors. Each processor
-owns a known statement format or revision, allowing support for additional
-banks and statement variants to be added without destabilizing processors
+owns a known statement family and grammar, allowing support for additional
+banks and statement revisions to be added without destabilizing processors
 already proven against historical statements.
 
 The project emphasizes strict and deterministic behavior. Unsupported statement
-formats, ambiguous processor matches, malformed recognized data, and unknown
-statement behavior should fail explicitly rather than being silently ignored
-or guessed.
+formats, ambiguous processor matches, malformed recognized data, unknown
+statement behavior, and reconciliation failures during archive validation are
+surfaced explicitly rather than silently ignored or guessed around.
 
-Version `0.4.0` expands the package into multi-institution statement support.
-Implemented processors now cover Chase credit cards, Chase checking, Chase
-home-equity lines of credit, and multiple Wells Fargo consumer and business
-statement families. The processors have been developed against private
-historical corpora while public tests remain fully synthetic and contain no
-private financial data.
+Version `0.6.0` expands the package to four supported institutions:
+
+```text
+Chase
+Wells Fargo
+American Express
+Discover
+```
+
+Implemented processors cover consumer and business deposit accounts, credit
+cards, home-equity and business lines of credit, and personal loans. The
+processors are developed against private historical statement corpora while
+public tests remain fully synthetic and contain no private financial data.
 
 The package intentionally focuses on answering:
 
@@ -47,7 +54,7 @@ layer, or Beancount-specific importer.
 Current release:
 
 ```text
-banking-statements 0.4.0
+banking-statements 0.6.0
 ```
 
 Supported Python versions:
@@ -63,7 +70,7 @@ Current implemented statement support:
 
 ```text
 Chase
-    credit cards
+    credit card
         modern statement layouts
         historical statement layouts
         co-branded statement layouts
@@ -76,7 +83,6 @@ Chase
         observed formats spanning 2019–2026
 
     home-equity line of credit
-        Chase Home Equity Line of Credit statements
         advances and initial funding
         payments and additional-principal payments
         fee assessments and fee payments
@@ -92,6 +98,30 @@ Wells Fargo
     business checking
     business credit card
     business line of credit
+
+American Express
+    personal credit card
+    business credit card
+    business checking
+    business line of credit
+    personal loan
+    observed archive coverage spanning 2013–2026
+
+Discover
+    checking
+        Cashback Checking
+        Cashback Debit
+        legacy and current statement layouts
+        observed formats spanning 2018–2026
+
+    credit card
+        legacy transaction/post-date layouts
+        current single-date transaction layouts
+        payments and credits
+        purchases
+        fees
+        interest
+        observed formats spanning 2019–2025
 ```
 
 Current normalized domain includes:
@@ -110,38 +140,36 @@ TransactionEvent
 TransactionDirection
 ```
 
-Current Chase credit-card capabilities include account identity, masked and
-unmasked account numbers, statement periods, opening and closing balances,
-purchases, payments, merchant credits, fees, interest charges, balance
-transfers, My Chase Loan activity, promotional adjustments, reversals,
-cross-year transaction dates, historical transaction-date references,
-foreign-currency continuation preservation, and statement reconciliation.
+Supported account types currently include:
 
-Current Chase checking capabilities include account identity, statement
-periods, beginning and ending balances, signed transaction-table parsing,
-multi-page transaction detail, wrapped and continued descriptions, deposits,
-withdrawals, ACH activity, card payments, transfers, fees, credits, cross-year
-transaction dates, debit/credit normalization, and statement reconciliation.
-
-Current Chase HELOC capabilities include account identity, statement periods,
-opening and closing debt balances, advances, initial funding, additional
-principal payments, regular payments, fee assessments and fee payments,
-finance-charge accrual, funds-applied and funds-reversed allocation behavior,
-payoff cycles, negative credit balances, zero-activity cycles, and strict
-line-of-credit reconciliation. The private Chase HELOC corpus currently
-validates 28 of 28 monthly statements with zero reconciliation difference.
-
-Current Wells Fargo support includes consumer checking and credit-card
-statements plus business checking, business credit-card, and business
-line-of-credit statement families. The Wells Fargo BusinessLine processor uses
-layout-aware PDF evidence where column position carries transaction direction.
+```text
+CHECKING
+SAVINGS
+CREDIT_CARD
+LINE_OF_CREDIT
+LOAN
+```
 
 The complete private statement archive currently validates:
 
 ```text
-1001 / 1001 PASS
+1963 / 1963 PASS
 reconciliation=PASS
 difference=0.00
+```
+
+That archive total consists of the previously proven Chase and Wells Fargo
+corpora plus:
+
+```text
+American Express
+    692 / 692 PASS
+
+Discover checking
+    200 / 200 PASS
+
+Discover credit card
+    70 / 70 PASS
 ```
 
 Quality gates include Ruff, strict mypy, pytest, 100% branch coverage,
@@ -173,7 +201,8 @@ uv sync --dev
 ## Basic Usage
 
 The package exposes generic domain primitives plus implemented statement
-processors for supported Chase and Wells Fargo statement families.
+processors for supported Chase, Wells Fargo, American Express, and Discover
+statement families.
 
 ```python
 from datetime import date
@@ -205,25 +234,24 @@ transaction = TransactionEvent(
 )
 ```
 
-Chase credit-card statements are handled by the stable processor identifier
-`chase.credit_card.v1`.
-
-Chase checking statements are handled by:
+Stable processor identifiers are intentionally account-family specific.
+Examples include:
 
 ```text
+chase.credit_card.v1
 chase.checking.v1
-```
-
-Chase home-equity line-of-credit statements are handled by:
-
-```text
 chase.heloc.v1
+
+discover.checking.v1
+discover.credit_card.v1
 ```
 
+Processor identity is part of source evidence and should remain stable for a
+supported grammar.
 
 ## Chase Credit Card Support
 
-`0.2.0` includes real Chase credit-card statement support through:
+Chase credit-card statements are handled through:
 
 ```text
 chase.credit_card.v1
@@ -234,32 +262,17 @@ credit-card statement grammars observed in the private development corpus from
 2019 through 2026.
 
 The implementation intentionally tolerates only known PDF text-extraction
-artifacts demonstrated by real statements. Examples include variants such as `Opening/Closing Date` versus the extracted form
-`O\`pening/Closing Date`, and `New Balance` versus `N\`ew Balance`. Broad fuzzy matching and generic character de-duplication are
-intentionally avoided.
+artifacts demonstrated by real statements. Examples include variants such as
+`Opening/Closing Date` versus the extracted form `O\`pening/Closing Date`, and
+`New Balance` versus `N\`ew Balance`. Broad fuzzy matching and generic character
+de-duplication are intentionally avoided.
 
 Historical statements may expose full account numbers while newer statements
 may expose masked numbers. `AccountIdentity` preserves the display value stated
 by the source document and separately exposes the last four digits when
 available.
 
-### Statement balances
-
-Supported statements expose generic balance checkpoints:
-
-```python
-StatementBalanceSummary(
-    opening_balance=...,
-    closing_balance=...,
-)
-```
-
-These values are parsed as stated by the bank. They are not rewritten to force
-reconciliation.
-
-### Supported activity
-
-The Chase credit-card processor currently normalizes activity including:
+Supported activity includes:
 
 ```text
 purchases
@@ -276,7 +289,6 @@ reversals
 Normalized amounts are positive magnitudes and `TransactionDirection` carries
 the economic direction.
 
-
 ## Chase Checking Support
 
 Chase checking statements are handled through:
@@ -286,8 +298,7 @@ chase.checking.v1
 ```
 
 The processor has been validated against a private chronological corpus of 182
-statements spanning observed formats from 2019 through 2026. The complete
-private corpus currently passes strict parsing and reconciliation:
+statements spanning observed formats from 2019 through 2026:
 
 ```text
 182 / 182 PASS
@@ -297,7 +308,9 @@ difference=0.00
 
 The parser supports statement identity, reporting periods, beginning and ending
 balances, transaction-detail tables, multi-page activity sections, wrapped
-transaction descriptions, and normalized checking transactions.
+transaction descriptions, deposits, withdrawals, ACH activity, card payments,
+transfers, fees, credits, cross-year transaction dates, debit/credit
+normalization, and statement reconciliation.
 
 Checking transaction rows are reconstructed from statement text shaped like:
 
@@ -327,7 +340,6 @@ The running-balance column remains parser evidence from the source statement;
 the normalized public transaction model intentionally stays focused on the
 transaction date, amount, direction, description, and optional source evidence.
 
-
 ## Chase HELOC Support
 
 Chase home-equity line-of-credit statements are handled through:
@@ -352,8 +364,8 @@ funds actually applied to the account is normalized as credits.
 
 Chase HELOC statements expose payment-allocation rows that are not always
 independent economic transactions. The processor distinguishes payment
-allocation detail, funds applied, and funds reversed so statement bookkeeping is
-not double-counted.
+allocation detail, funds applied, and funds reversed so statement bookkeeping
+is not double-counted.
 
 Finance charges are parsed from the statement's finance-charge calculation
 section rather than inferred from the closing summary alone. This matters when
@@ -364,6 +376,224 @@ finance charges accrued during the period.
 The processor also supports zero-activity statements and credit-balance
 statements where the reported balance is negative.
 
+## Wells Fargo Support
+
+Wells Fargo support covers:
+
+```text
+checking
+credit card
+business checking
+business credit card
+business line of credit
+```
+
+The processors normalize supported consumer and business statements into the
+same domain used by every other institution.
+
+Wells Fargo support includes account identity, statement periods, opening and
+closing balances, transaction reconstruction, debit/credit normalization,
+source evidence, and account-type-aware reconciliation.
+
+The Wells Fargo business line-of-credit processor uses layout-aware PDF evidence
+where column position carries transaction direction. This is an intentional
+example of the package treating PDF layout as source evidence when flattened
+text alone is insufficient to preserve financial meaning.
+
+## American Express Support
+
+American Express support was introduced for `0.5.0` and is included in
+`0.6.0`.
+
+Supported account families are:
+
+```text
+personal credit card
+business credit card
+business checking
+business line of credit
+personal loan
+```
+
+The complete American Express private archive currently validates:
+
+```text
+692 / 692 PASS
+reconciliation=PASS
+difference=0.00
+```
+
+The archive includes statement evidence spanning 2013 through 2026 and covers
+multiple historical layouts and extraction grammars.
+
+American Express credit-card support reconstructs payments, credits, charges,
+fees, and interest while preserving source context such as card-ending sections
+and supported continuation detail.
+
+Business checking support normalizes deposit-account activity and uses
+asset-account reconciliation:
+
+```text
+opening balance
++ credits
+- debits
+= closing balance
+```
+
+Business line-of-credit and personal-loan support use debt-account
+reconciliation:
+
+```text
+opening balance
++ debits
+- credits
+= closing balance
+```
+
+The personal-loan work introduced first-class `LOAN` account support to the
+generic domain rather than encoding loan semantics as a special case inside one
+processor.
+
+## Discover Checking Support
+
+Discover checking statements are handled through:
+
+```text
+discover.checking.v1
+```
+
+The processor has been validated against two private account archives totaling
+200 monthly statements:
+
+```text
+200 / 200 PASS
+reconciliation=PASS
+difference=0.00
+```
+
+Observed statement formats span 2018 through 2026.
+
+The supported archive includes the evolution from:
+
+```text
+CASHBACK CHECKING
+```
+
+to:
+
+```text
+CASHBACK DEBIT
+```
+
+and the transition from legacy `DiscoverBank.com` statement branding to current
+`Discover.com` branding.
+
+The processor supports:
+
+```text
+legacy account-ending identity
+current full account-number identity
+statement-period parsing
+beginning and ending balances
+multi-page ACCOUNT ACTIVITY sections
+shared activity headers across subsections
+Deposits and Credits
+Checks
+ATM and Debit Card Withdrawals
+Electronic Withdrawals
+fees and other withdrawals
+service charges
+zero-activity statements
+```
+
+Discover checking activity historically used:
+
+```text
+Eff. Date
+Bus. Date
+```
+
+and later:
+
+```text
+Eff. Date
+Syst. Date
+```
+
+The normalized transaction date uses the statement's posting/system date when
+available because that is the date Discover identifies as the date the
+transaction is generally processed and posted.
+
+## Discover Credit Card Support
+
+Discover credit-card statements are handled through:
+
+```text
+discover.credit_card.v1
+```
+
+The private Discover credit-card archive currently validates:
+
+```text
+70 / 70 PASS
+reconciliation=PASS
+difference=0.00
+```
+
+Observed formats span 2019 through 2025.
+
+Two major statement grammars are supported.
+
+Legacy statements expose separate transaction and posting dates:
+
+```text
+Trans. Date
+Post Date
+```
+
+Newer statements expose a single transaction-date column.
+
+For legacy statements, the normalized transaction date prefers the reported
+posting date. For newer statements, the reported transaction date is resolved
+relative to the statement closing date. This intentionally allows statement
+activity whose printed transaction date precedes the nominal billing-period
+start when the statement itself reports that activity in the current cycle.
+
+Supported economic activity includes:
+
+```text
+payments and credits
+purchases
+fees
+interest
+```
+
+Fee and interest activity is normalized from the statement's period totals.
+This avoids double-counting when the same interest amount is also broken out by
+interest category elsewhere in the statement.
+
+The processor also tolerates a proven PDF extraction artifact where text from
+an adjacent rewards column can appear after a complete transaction amount.
+That adjacent-column text is preserved in raw source evidence but is not
+silently appended to the transaction description.
+
+## Statement Balances
+
+Supported statements expose generic balance checkpoints:
+
+```python
+StatementBalanceSummary(
+    opening_balance=...,
+    closing_balance=...,
+)
+```
+
+These values are parsed as stated by the bank. They are not rewritten to force
+reconciliation.
+
+A parser is responsible for understanding the statement grammar. Reconciliation
+then independently verifies whether normalized economic activity explains the
+reported balance movement.
 
 ## Reconciliation
 
@@ -377,7 +607,7 @@ result = reconcile_statement(statement)
 
 Reconciliation is account-type aware.
 
-For debt accounts such as credit cards and lines of credit:
+For debt accounts such as credit cards, lines of credit, and loans:
 
 ```text
 opening balance
@@ -386,7 +616,7 @@ opening balance
 = expected closing balance
 ```
 
-For deposit accounts such as checking and savings:
+For asset accounts such as checking and savings:
 
 ```text
 opening balance
@@ -395,13 +625,17 @@ opening balance
 = expected closing balance
 ```
 
-The result includes the parsed debit and credit totals, expected closing
-balance, difference, and a `reconciled` boolean. A mismatch does not modify or
-reject the parsed statement.
+The result includes parsed debit and credit totals, expected closing balance,
+difference, and a `reconciled` boolean. A mismatch does not rewrite the parsed
+statement.
 
 The private archive smoke tooling is stricter by default and treats a
 reconciliation mismatch as a smoke failure so incomplete or misdirected
 activity is surfaced during development.
+
+Reconciliation is therefore not a parser shortcut. It is an independent
+validation layer used to prove that the extracted financial activity is
+economically complete.
 
 ## Financial Values
 
@@ -419,6 +653,9 @@ assert to_decimal("(42.17)") == Decimal("-42.17")
 
 Floating-point arithmetic is intentionally avoided for normalized financial
 values.
+
+Normalized transaction amounts use positive magnitudes. Economic direction is
+represented separately by `TransactionDirection`.
 
 ## Source Evidence
 
@@ -455,8 +692,8 @@ processor
 sequence
 ```
 
-This provenance is important for auditing parser behavior and for future
-reconciliation layers.
+This provenance is important for auditing parser behavior, debugging future
+statement revisions, and verifying reconciliation decisions.
 
 ## Architecture
 
@@ -477,7 +714,7 @@ identity and statement-balance parsing
     ↓
 logical transaction rows
     ↓
-focused economic parsing
+focused economic normalization
     ↓
 ParsedStatement
     ↓
@@ -498,6 +735,9 @@ databases
 Beancount
 application frameworks
 ```
+
+Institution-specific extraction behavior belongs in processors. Generic
+financial meaning belongs in the domain.
 
 ## Processor Model
 
@@ -528,6 +768,35 @@ stable as the package grows.
 A materially different statement structure should generally receive a new
 processor rather than turning an existing processor into an increasingly broad
 universal parser.
+
+Multiple proven historical layouts can remain inside one processor when they
+belong to the same statement family and can be distinguished explicitly without
+weakening the processor's failure behavior.
+
+## Institution Detection
+
+Institution detection uses explicit marker signatures derived from observed
+statement evidence.
+
+A signature should be specific enough to identify the institution without
+claiming unrelated documents from the same company.
+
+Institution detection and processor selection are separate steps:
+
+```text
+statement text
+    ↓
+institution signature
+    ↓
+institution
+    ↓
+processor registry
+    ↓
+exact supported account-family processor
+```
+
+New signatures should be added because an observed document requires them, not
+because a broader marker seems theoretically convenient.
 
 ## Deterministic Processor Selection
 
@@ -561,8 +830,11 @@ When a future statement fails, the failure should first be classified.
 New institution?
     → add institution detection and processor support
 
-Same institution, materially different statement structure?
-    → add a new processor
+Same institution, new account family?
+    → add an isolated account-family processor
+
+Same institution and account family, materially different structure?
+    → add or explicitly support a proven grammar boundary
 
 Same processor, new economic capability?
     → add a focused capability module
@@ -592,10 +864,14 @@ unsupported date grammar
 malformed recognized rows
 unresolved statement identity
 invalid normalized output
+unexplained reconciliation differences during archive validation
 ```
 
 Specific failures are preferred over generic parse errors because they make
 future statement support easier to develop and audit.
+
+The normal development response to a new archive failure is to inspect the
+evidence first, not to make the parser broadly more permissive.
 
 ## Logical Rows
 
@@ -611,9 +887,10 @@ multi-line ACH details
 fragmented columns
 inherited dates
 page breaks inside tables
+adjacent-column bleed
 ```
 
-When required, processors should reconstruct logical rows before attempting to
+When required, processors reconstruct logical rows before attempting to
 normalize economic meaning.
 
 ```text
@@ -632,7 +909,7 @@ Current implemented support:
 
 ```text
 Chase
-    credit cards
+    credit card
     checking
     home-equity line of credit
 
@@ -642,19 +919,27 @@ Wells Fargo
     business checking
     business credit card
     business line of credit
+
+American Express
+    personal credit card
+    business credit card
+    business checking
+    business line of credit
+    personal loan
+
+Discover
+    checking
+    credit card
 ```
 
-Chase credit-card and checking processors have been validated against broad
-private historical corpora covering observed statement formats from 2019
-through 2026. Chase HELOC support has been validated against 28 monthly
-statements covering observed formats from 2020 through 2022.
+A bank, account family, or statement format is listed as supported only after
+its processor has been implemented and validated against real statement
+evidence.
 
-The complete private development archive currently contains 1001 supported
-statements, all of which pass extraction, detection, processor selection,
-parsing, normalization, and strict reconciliation with zero difference.
-
-A bank or statement format is listed as supported only after its processor has
-been implemented and validated against real statement evidence.
+The complete private development archive currently contains 1963 supported
+statements, all of which pass extraction, institution detection, processor
+selection, parsing, normalization, and strict reconciliation with zero
+difference.
 
 ## Private Statement Corpus
 
@@ -666,18 +951,25 @@ The expected local structure is:
 ```text
 private-data/
 └── statements/
-    ├── institution-a/
-    ├── institution-b/
+    ├── chase/
+    ├── wellsfargo/
+    ├── american-express/
+    ├── discover/
     └── ...
 ```
 
 `private-data/` is excluded from Git.
 
-Real statements, account numbers, transaction histories, names, addresses, and
-other private financial data must never be committed to the repository or
-distributed in package artifacts.
+Real statements, account numbers, transaction histories, names, addresses,
+transaction references, balances, and other private financial data must never
+be committed to the repository or distributed in package artifacts.
 
-Public tests use synthetic statement data.
+Public tests use generic synthetic statement data.
+
+Synthetic fixtures should preserve only the structural grammar required to
+prove parser behavior. They should never copy real names, account numbers,
+addresses, merchant references, transaction identifiers, balances, or other
+private values from the development archive.
 
 ## Statement Inspection
 
@@ -711,7 +1003,7 @@ looks visually.
 
 ## Archive Smoke Testing
 
-Institution processors will be validated against private historical statement
+Institution processors are validated against private historical statement
 archives.
 
 The development workflow is intentionally chronological:
@@ -725,16 +1017,24 @@ The development workflow is intentionally chronological:
 
 Development stops at the first failure.
 
-That statement is inspected, the failure is classified, and the smallest
-correct capability is added.
+That statement is inspected, the failure is classified from actual extracted
+evidence, and the smallest correct capability or grammar extension is added.
 
-Then the archive is rerun from the beginning.
+A generic synthetic regression test is then added before the archive resumes.
 
 Typical usage:
 
 ```bash
 make smoke-archive \
     folder="private-data/statements/example"
+```
+
+Resume from a particular archive position:
+
+```bash
+make smoke-archive \
+    folder="private-data/statements/example" \
+    from=4
 ```
 
 Limit the run:
@@ -745,7 +1045,7 @@ make smoke-archive \
     limit=10
 ```
 
-Continue after failures when investigating an archive:
+Continue after failures when mapping an archive:
 
 ```bash
 make smoke-archive \
@@ -772,7 +1072,7 @@ Run a single statement and print normalized transactions:
 
 ```bash
 uv run python -m scripts.archive_smoke \
-    private-data/statements/chase/credit-card/example.pdf \
+    private-data/statements/example/statement.pdf \
     --show-transactions
 ```
 
@@ -781,9 +1081,47 @@ smoke failures:
 
 ```bash
 uv run python -m scripts.archive_smoke \
-    private-data/statements/chase/credit-card \
+    private-data/statements/example \
     --allow-reconciliation-failures
 ```
+
+Include a traceback while investigating:
+
+```bash
+uv run python -m scripts.archive_smoke \
+    private-data/statements/example/statement.pdf \
+    --show-transactions \
+    --allow-reconciliation-failures \
+    --traceback
+```
+
+The private corpus is a local integration and regression corpus. It is never a
+source of public fixture data.
+
+## Development Workflow for New Statement Families
+
+A new account family is developed from evidence rather than from assumptions.
+
+The typical loop is:
+
+```text
+1. Run the private archive.
+2. Stop at the first failure.
+3. Inspect the exact extracted statement text.
+4. Compare the failure with existing processor architecture.
+5. Implement the narrowest correct grammar or economic rule.
+6. Add a generic synthetic regression test.
+7. Run formatting, typing, and 100% branch coverage.
+8. Re-run the exact failing statement.
+9. Resume the archive from that position.
+10. Repeat until the complete corpus reconciles exactly.
+```
+
+A broader archive scan can be useful for identifying major historical layout
+generations, but fixes are still made one proven grammar boundary at a time.
+
+The goal is not merely to make every PDF parse. The goal is to understand why
+each supported statement reconciles.
 
 ## Development
 
@@ -873,6 +1211,9 @@ distribution metadata
 typed wheel contents
 clean-wheel installation
 ```
+
+A release should also be smoke-validated against the complete supported private
+archive before publication.
 
 ## Build
 
@@ -1011,8 +1352,8 @@ package without becoming responsibilities of the statement parser itself.
 Current milestone:
 
 ```text
-0.4.0
-    multi-institution statement support
+0.6.0
+    four-institution statement support
 
     Chase
         credit card
@@ -1026,18 +1367,37 @@ Current milestone:
         business credit card
         business line of credit
 
+    American Express
+        personal credit card
+        business credit card
+        business checking
+        business line of credit
+        personal loan
+
+    Discover
+        checking
+        credit card
+
     account-type-aware reconciliation
     layout-aware PDF evidence
-    strict processor selection
-    1001 / 1001 private statements PASS
+    strict institution detection
+    deterministic processor selection
+    100% branch coverage
+    1963 / 1963 private statements PASS
 ```
 
-Expected next phases:
+Next evidence-driven institution target:
 
 ```text
-additional Chase account families when supported by evidence
+Capital One
+```
+
+Expected later phases:
+
+```text
+additional account families for supported institutions
 additional institutions
-additional statement grammars
+additional historical statement grammars
 additional reconciliation capabilities when required by statement evidence
 ```
 
