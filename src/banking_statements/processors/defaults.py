@@ -20,6 +20,10 @@ from banking_statements.processors.chase import (
     ChaseHelocProcessor,
 )
 from banking_statements.processors.detection import InstitutionDetector
+from banking_statements.processors.discover import (
+    DISCOVER_SIGNATURES,
+    DiscoverCheckingProcessor,
+)
 from banking_statements.processors.registry import ProcessorRegistry
 from banking_statements.processors.wellsfargo import (
     WELLS_FARGO_SIGNATURES,
@@ -38,6 +42,7 @@ def build_default_institution_detector() -> InstitutionDetector:
             *CHASE_SIGNATURES,
             *WELLS_FARGO_SIGNATURES,
             *AMERICAN_EXPRESS_SIGNATURES,
+            *DISCOVER_SIGNATURES,
         )
     )
 
@@ -58,5 +63,6 @@ def build_default_processor_registry() -> ProcessorRegistry:
             AmericanExpressBusinessCheckingProcessor(),
             AmericanExpressBusinessLineOfCreditProcessor(),
             AmericanExpressPersonalLoanProcessor(),
+            DiscoverCheckingProcessor(),
         )
     )
