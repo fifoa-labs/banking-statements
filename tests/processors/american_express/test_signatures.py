@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from banking_statements.processors.american_express import (
     AMERICAN_EXPRESS_BUSINESS_CHECKING_SIGNATURES,
+    AMERICAN_EXPRESS_BUSINESS_LINE_OF_CREDIT_SIGNATURES,
     AMERICAN_EXPRESS_CREDIT_CARD_SIGNATURES,
     AMERICAN_EXPRESS_SIGNATURES,
 )
@@ -66,8 +67,31 @@ def test_american_express_business_checking_signatures_are_stable() -> None:
     )
 
 
+def test_american_express_business_line_of_credit_signatures_are_stable() -> (
+    None
+):
+    assert len(AMERICAN_EXPRESS_BUSINESS_LINE_OF_CREDIT_SIGNATURES) == 1
+
+    signature = AMERICAN_EXPRESS_BUSINESS_LINE_OF_CREDIT_SIGNATURES[0]
+
+    assert signature.institution == "american_express"
+    assert signature.required_markers == (
+        "Monthly statement",
+        "Statement Date",
+        "For the Period",
+        "Account number",
+        "Summary of account activity",
+        "Loans/debits",
+        "Costs and fees",
+        "Payments/credits",
+        "Transaction Summary",
+        "American Express Business Line of Credit Account",
+    )
+
+
 def test_american_express_signatures_include_all_account_families() -> None:
     assert (
         *AMERICAN_EXPRESS_CREDIT_CARD_SIGNATURES,
         *AMERICAN_EXPRESS_BUSINESS_CHECKING_SIGNATURES,
+        *AMERICAN_EXPRESS_BUSINESS_LINE_OF_CREDIT_SIGNATURES,
     ) == AMERICAN_EXPRESS_SIGNATURES

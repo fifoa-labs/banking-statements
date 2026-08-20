@@ -57,7 +57,26 @@ AMERICAN_EXPRESS_BUSINESS_CHECKING_SIGNATURES = (
     ),
 )
 
+AMERICAN_EXPRESS_BUSINESS_LINE_OF_CREDIT_SIGNATURES = (
+    InstitutionSignature(
+        institution="american_express",
+        required_markers=(
+            "Monthly statement",
+            "Statement Date",
+            "For the Period",
+            "Account number",
+            "Summary of account activity",
+            "Loans/debits",
+            "Costs and fees",
+            "Payments/credits",
+            "Transaction Summary",
+            "American Express Business Line of Credit Account",
+        ),
+    ),
+)
+
 AMERICAN_EXPRESS_SIGNATURES = (
     *AMERICAN_EXPRESS_CREDIT_CARD_SIGNATURES,
     *AMERICAN_EXPRESS_BUSINESS_CHECKING_SIGNATURES,
+    *AMERICAN_EXPRESS_BUSINESS_LINE_OF_CREDIT_SIGNATURES,
 )
