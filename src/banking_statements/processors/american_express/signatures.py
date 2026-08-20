@@ -75,8 +75,24 @@ AMERICAN_EXPRESS_BUSINESS_LINE_OF_CREDIT_SIGNATURES = (
     ),
 )
 
+AMERICAN_EXPRESS_PERSONAL_LOAN_SIGNATURES = (
+    InstitutionSignature(
+        institution="american_express",
+        required_markers=(
+            "American Express® Personal Loans",
+            "Invoice Date",
+            "Next Invoice Date",
+            "Loan Account Ending",
+            "Payment Information Account Summary",
+            "Previous Outstanding Loan Balance",
+            "Outstanding Loan Balance",
+        ),
+    ),
+)
+
 AMERICAN_EXPRESS_SIGNATURES = (
     *AMERICAN_EXPRESS_CREDIT_CARD_SIGNATURES,
     *AMERICAN_EXPRESS_BUSINESS_CHECKING_SIGNATURES,
     *AMERICAN_EXPRESS_BUSINESS_LINE_OF_CREDIT_SIGNATURES,
+    *AMERICAN_EXPRESS_PERSONAL_LOAN_SIGNATURES,
 )

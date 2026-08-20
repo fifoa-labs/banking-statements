@@ -36,6 +36,8 @@ def test_account_types_are_stable_strings() -> None:
     assert AccountType.CHECKING.value == "checking"
     assert AccountType.SAVINGS.value == "savings"
     assert AccountType.CREDIT_CARD.value == "credit_card"
+    assert AccountType.LINE_OF_CREDIT.value == "line_of_credit"
+    assert AccountType.LOAN.value == "loan"
 
 
 def test_statement_balance_summary_preserves_reported_values() -> None:

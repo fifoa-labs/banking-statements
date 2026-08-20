@@ -10,6 +10,7 @@ from banking_statements.processors.american_express import (
     AMERICAN_EXPRESS_BUSINESS_CHECKING_SIGNATURES,
     AMERICAN_EXPRESS_BUSINESS_LINE_OF_CREDIT_SIGNATURES,
     AMERICAN_EXPRESS_CREDIT_CARD_SIGNATURES,
+    AMERICAN_EXPRESS_PERSONAL_LOAN_SIGNATURES,
     AMERICAN_EXPRESS_SIGNATURES,
 )
 
@@ -89,9 +90,27 @@ def test_american_express_business_line_of_credit_signatures_are_stable() -> (
     )
 
 
+def test_american_express_personal_loan_signatures_are_stable() -> None:
+    assert len(AMERICAN_EXPRESS_PERSONAL_LOAN_SIGNATURES) == 1
+
+    signature = AMERICAN_EXPRESS_PERSONAL_LOAN_SIGNATURES[0]
+
+    assert signature.institution == "american_express"
+    assert signature.required_markers == (
+        "American Express® Personal Loans",
+        "Invoice Date",
+        "Next Invoice Date",
+        "Loan Account Ending",
+        "Payment Information Account Summary",
+        "Previous Outstanding Loan Balance",
+        "Outstanding Loan Balance",
+    )
+
+
 def test_american_express_signatures_include_all_account_families() -> None:
     assert (
         *AMERICAN_EXPRESS_CREDIT_CARD_SIGNATURES,
         *AMERICAN_EXPRESS_BUSINESS_CHECKING_SIGNATURES,
         *AMERICAN_EXPRESS_BUSINESS_LINE_OF_CREDIT_SIGNATURES,
+        *AMERICAN_EXPRESS_PERSONAL_LOAN_SIGNATURES,
     ) == AMERICAN_EXPRESS_SIGNATURES

@@ -11,6 +11,7 @@ from banking_statements.processors.american_express import (
     AmericanExpressBusinessCheckingProcessor,
     AmericanExpressBusinessLineOfCreditProcessor,
     AmericanExpressCreditCardProcessor,
+    AmericanExpressPersonalLoanProcessor,
 )
 from banking_statements.processors.chase import (
     CHASE_SIGNATURES,
@@ -56,5 +57,6 @@ def build_default_processor_registry() -> ProcessorRegistry:
             AmericanExpressCreditCardProcessor(),
             AmericanExpressBusinessCheckingProcessor(),
             AmericanExpressBusinessLineOfCreditProcessor(),
+            AmericanExpressPersonalLoanProcessor(),
         )
     )
