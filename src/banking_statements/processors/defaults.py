@@ -13,6 +13,10 @@ from banking_statements.processors.american_express import (
     AmericanExpressCreditCardProcessor,
     AmericanExpressPersonalLoanProcessor,
 )
+from banking_statements.processors.capital_one import (
+    CAPITAL_ONE_SIGNATURES,
+    CapitalOneCreditCardProcessor,
+)
 from banking_statements.processors.chase import (
     CHASE_SIGNATURES,
     ChaseCheckingProcessor,
@@ -44,6 +48,7 @@ def build_default_institution_detector() -> InstitutionDetector:
             *WELLS_FARGO_SIGNATURES,
             *AMERICAN_EXPRESS_SIGNATURES,
             *DISCOVER_SIGNATURES,
+            *CAPITAL_ONE_SIGNATURES,
         )
     )
 
@@ -66,5 +71,6 @@ def build_default_processor_registry() -> ProcessorRegistry:
             AmericanExpressPersonalLoanProcessor(),
             DiscoverCheckingProcessor(),
             DiscoverCreditCardProcessor(),
+            CapitalOneCreditCardProcessor(),
         )
     )

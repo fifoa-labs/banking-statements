@@ -17,6 +17,10 @@ from banking_statements.processors.american_express import (
     AmericanExpressCreditCardProcessor,
     AmericanExpressPersonalLoanProcessor,
 )
+from banking_statements.processors.capital_one import (
+    CAPITAL_ONE_SIGNATURES,
+    CapitalOneCreditCardProcessor,
+)
 from banking_statements.processors.chase import (
     CHASE_SIGNATURES,
     ChaseCheckingProcessor,
@@ -46,13 +50,14 @@ def test_build_default_institution_detector() -> None:
         *WELLS_FARGO_SIGNATURES,
         *AMERICAN_EXPRESS_SIGNATURES,
         *DISCOVER_SIGNATURES,
+        *CAPITAL_ONE_SIGNATURES,
     )
 
 
 def test_build_default_processor_registry() -> None:
     registry = build_default_processor_registry()
 
-    assert len(registry.processors) == 14
+    assert len(registry.processors) == 15
     assert isinstance(registry.processors[0], ChaseCreditCardProcessor)
     assert isinstance(registry.processors[1], ChaseCheckingProcessor)
     assert isinstance(registry.processors[2], ChaseHelocProcessor)
@@ -88,3 +93,4 @@ def test_build_default_processor_registry() -> None:
     )
     assert isinstance(registry.processors[12], DiscoverCheckingProcessor)
     assert isinstance(registry.processors[13], DiscoverCreditCardProcessor)
+    assert isinstance(registry.processors[14], CapitalOneCreditCardProcessor)
