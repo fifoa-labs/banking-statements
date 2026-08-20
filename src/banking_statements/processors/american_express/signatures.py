@@ -26,6 +26,17 @@ AMERICAN_EXPRESS_BUSINESS_CHECKING_SIGNATURES = (
         institution="american_express",
         required_markers=(
             "Business Checking Account Statement",
+            "Statement Period",
+            "Account Ending",
+            "Beginning Balance",
+            "Ending Balance",
+            "Account Activity",
+        ),
+    ),
+    InstitutionSignature(
+        institution="american_express",
+        required_markers=(
+            "Business Checking Account Statement",
             "StatementPeriod",
             "AccountEnding",
             "BeginningBalance",

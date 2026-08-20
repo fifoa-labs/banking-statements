@@ -100,3 +100,25 @@ def test_parse_identity_current_layout() -> None:
     assert identity.account.last4 == "4625"
     assert identity.statement_start == date(2024, 4, 1)
     assert identity.statement_end == date(2024, 4, 30)
+
+
+def test_parse_identity_legacy_layout() -> None:
+    identity = parse_identity(
+        make_statement_text(
+            "\n".join(  # noqa: FLY002
+                (
+                    "Statement Period",
+                    "08/01/2022 - 08/31/2022",
+                    "Business Checking Account Statement",
+                    "Account Ending *4625",
+                    "Account Name General Operations",
+                )
+            )
+        )
+    )
+
+    assert identity.account.account_type is AccountType.CHECKING
+    assert identity.account.display_number == "4625"
+    assert identity.account.last4 == "4625"
+    assert identity.statement_start == date(2022, 8, 1)
+    assert identity.statement_end == date(2022, 8, 31)

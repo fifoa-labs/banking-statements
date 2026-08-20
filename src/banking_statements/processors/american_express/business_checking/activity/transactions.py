@@ -6,7 +6,7 @@ Transaction normalization for American Express business-checking statements.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
@@ -46,10 +46,12 @@ def parse_activity_transactions(
             "%m/%d/%Y",
         ).date()
 
-        if not period.start <= transaction_date <= period.end:
+        earliest_allowed_date = period.start - timedelta(days=1)
+
+        if not earliest_allowed_date <= transaction_date <= period.end:
             msg = (
                 "American Express business-checking transaction date is "
-                f"outside the statement period: {row.transaction_date}"
+                f"outside the supported statement boundary: {row.transaction_date}"  # noqa: E501
             )
             raise ValueError(msg)
 

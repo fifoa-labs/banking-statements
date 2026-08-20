@@ -33,10 +33,18 @@ _ACCOUNT_PATTERNS = (
     re.compile(
         r"Account Ending:\s*\*\s*(?P<last4>\d{4})",
     ),
+    re.compile(
+        r"Account Ending\s+\*(?P<last4>\d{4})",
+    ),
 )
 
 
 _PERIOD_PATTERNS = (
+    re.compile(
+        r"Statement Period\s+"
+        r"(?P<start>\d{2}/\d{2}/\d{4})\s*-\s*"
+        r"(?P<end>\d{2}/\d{2}/\d{4})",
+    ),
     re.compile(
         r"StatementPeriod\s+"
         r"(?P<start>\d{2}/\d{2}/\d{4})\s*-\s*"

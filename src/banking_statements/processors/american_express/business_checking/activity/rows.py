@@ -7,7 +7,7 @@ Activity-row parsing for American Express business-checking statements.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
@@ -35,12 +35,13 @@ class AmericanExpressBusinessCheckingActivityRow:
     amount: Decimal
     balance: Decimal
     section: AmericanExpressBusinessCheckingActivitySection
+    continuation_lines: tuple[str, ...] = ()
 
 
 _BEGINNING_ROW_PATTERN = re.compile(
     r"^(?P<date>\d{2}/\d{2}/\d{4})\s+"
     r"Beginning\s*Balance\s+"
-    r"\$(?P<balance>[\d,]+\.\d{2})\)?$",
+    r"\$(?P<balance>[\d,]+\.\d{2})\s*\)?$",
 )
 
 _ENDING_ROW_PATTERN = re.compile(
@@ -50,8 +51,12 @@ _ENDING_ROW_PATTERN = re.compile(
 _ROW_PATTERN = re.compile(
     r"^(?P<date>\d{2}/\d{2}/\d{4})\s+"
     r"(?P<description>.+?)\s+"
-    r"\$(?P<amount>[\d,]+\.\d{2})\s+"
-    r"\$(?P<balance>[\d,]+\.\d{2})\)?$",
+    r"(?P<debit_open>\()?"
+    r"\$?"
+    r"(?P<legacy_debit_open>\()?"
+    r"(?P<amount>[\d,]+\.\d{2})"
+    r"(?P<debit_close>\))?\s+"
+    r"\$(?P<balance>[\d,]+\.\d{2})\s*\)?$",
 )
 
 _DATE_PREFIX_PATTERN = re.compile(
@@ -74,7 +79,7 @@ def _parse_amount(value: str) -> Decimal:
     return to_decimal(value)
 
 
-def parse_activity_rows(  # noqa: C901
+def parse_activity_rows(  # noqa: C901, PLR0912
     text: StatementText,
 ) -> tuple[AmericanExpressBusinessCheckingActivityRow, ...]:
     """Parse American Express business-checking account activity."""
@@ -105,6 +110,21 @@ def parse_activity_rows(  # noqa: C901
         if line.startswith(_IGNORED_PREFIXES):
             continue
 
+        if (
+            rows
+            and _DATE_PREFIX_PATTERN.match(line) is None
+            and _BEGINNING_ROW_PATTERN.fullmatch(line) is None
+        ):
+            previous = rows[-1]
+            rows[-1] = replace(
+                previous,
+                continuation_lines=(
+                    *previous.continuation_lines,
+                    line,
+                ),
+            )
+            continue
+
         row_match = _ROW_PATTERN.fullmatch(line)
         if row_match is None:
             if _DATE_PREFIX_PATTERN.match(line):
@@ -126,7 +146,21 @@ def parse_activity_rows(  # noqa: C901
         amount = _parse_amount(row_match.group("amount"))
         balance = _parse_amount(row_match.group("balance"))
 
-        if balance == running_balance + amount:
+        is_parenthesized_debit = (
+            row_match.group("debit_open") is not None
+            or row_match.group("legacy_debit_open") is not None
+        ) and row_match.group("debit_close") is not None
+
+        if is_parenthesized_debit:
+            if balance != running_balance - amount:
+                msg = (
+                    "American Express business-checking debit row does not "
+                    f"reconcile with its running balance: {line}"
+                )
+                raise ValueError(msg)
+
+            section = AmericanExpressBusinessCheckingActivitySection.DEBIT
+        elif balance == running_balance + amount:
             section = AmericanExpressBusinessCheckingActivitySection.CREDIT
         elif balance == running_balance - amount:
             section = AmericanExpressBusinessCheckingActivitySection.DEBIT

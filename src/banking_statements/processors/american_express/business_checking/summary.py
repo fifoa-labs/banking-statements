@@ -21,6 +21,9 @@ _BALANCE_PATTERN = r"\$?(?P<amount>[\d,]+\.\d{2})\)?"
 
 _BEGINNING_BALANCE_PATTERNS = (
     re.compile(
+        r"Beginning Balance\s+\$(?P<amount>[\d,]+\.\d{2})\s*\)?",
+    ),
+    re.compile(
         r"BeginningBalance\s+\$?(?P<amount>[\d,]+\.\d{2})\)?",
     ),
     re.compile(
@@ -30,6 +33,9 @@ _BEGINNING_BALANCE_PATTERNS = (
 )
 
 _ENDING_BALANCE_PATTERNS = (
+    re.compile(
+        r"Ending Balance\s+\$(?P<amount>[\d,]+\.\d{2})\s*\)?",
+    ),
     re.compile(
         r"EndingBalance\s+\$?(?P<amount>[\d,]+\.\d{2})\)?",
     ),

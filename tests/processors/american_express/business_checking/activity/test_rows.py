@@ -256,3 +256,133 @@ def test_parse_activity_rows_current_layout_without_transactions() -> None:
     )
 
     assert rows == ()
+
+
+def test_parse_activity_rows_legacy_layout() -> None:
+    rows = parse_activity_rows(
+        make_statement_text(
+            "\n".join(  # noqa: FLY002
+                (
+                    "Account Activity",
+                    "Date Description Credits Debits Balance",
+                    "08/01/2022 Beginning Balance $100.00 )",
+                    "08/05/2022 SAMPLE DEPOSIT $50.00 $150.00 )",
+                    "ID: 000000000000001",
+                    "08/10/2022 SAMPLE PAYMENT $25.00 $125.00 )",
+                    "ID: 000000000000002",
+                    "08/31/2022 Ending Balance $125.00 )",
+                    "24/7 Account Access | World-Class Service",
+                )
+            )
+        )
+    )
+
+    assert len(rows) == 2
+
+    assert rows[0].amount == Decimal("50.00")
+    assert rows[0].balance == Decimal("150.00")
+    assert (
+        rows[0].section
+        is AmericanExpressBusinessCheckingActivitySection.CREDIT
+    )
+
+    assert rows[1].amount == Decimal("25.00")
+    assert rows[1].balance == Decimal("125.00")
+    assert (
+        rows[1].section is AmericanExpressBusinessCheckingActivitySection.DEBIT
+    )
+
+
+def test_parse_activity_rows_parenthesized_debit() -> None:
+    rows = parse_activity_rows(
+        make_statement_text(
+            "\n".join(  # noqa: FLY002
+                (
+                    "Account Activity",
+                    "Date Description Credits Debits Balance",
+                    "02/01/2025 Beginning Balance $1,000.00",
+                    ("02/21/2025 SAMPLE PAYMENT ($200.00) $800.00"),
+                    "02/28/2025 Ending Balance $800.00",
+                    "24/7 Account Access | World-Class Service",
+                )
+            )
+        )
+    )
+
+    assert len(rows) == 1
+    assert rows[0].amount == Decimal("200.00")
+    assert rows[0].balance == Decimal("800.00")
+    assert (
+        rows[0].section is AmericanExpressBusinessCheckingActivitySection.DEBIT
+    )
+
+
+def test_parse_activity_rows_rejects_unreconciled_parenthesized_debit() -> (
+    None
+):
+    with pytest.raises(
+        ValueError,
+        match=(
+            "American Express business-checking debit row does not "
+            "reconcile with its running balance"
+        ),
+    ):
+        parse_activity_rows(
+            make_statement_text(
+                "\n".join(  # noqa: FLY002
+                    (
+                        "Account Activity",
+                        "Date Description Credits Debits Balance",
+                        "02/01/2025 Beginning Balance $1,000.00",
+                        ("02/21/2025 SAMPLE PAYMENT ($200.00) $900.00"),
+                        "24/7 Account Access | World-Class Service",
+                    )
+                )
+            )
+        )
+
+
+def test_parse_activity_rows_appends_continuation_line() -> None:
+    rows = parse_activity_rows(
+        make_statement_text(
+            "\n".join(  # noqa: FLY002
+                (
+                    "Account Activity",
+                    "Date Description Credits Debits Balance",
+                    "02/01/2025 Beginning Balance $1,000.00",
+                    "02/05/2025 SAMPLE DEPOSIT $200.00 $1,200.00",
+                    "ADDITIONAL TRANSFER DETAIL",
+                    "02/28/2025 Ending Balance $1,200.00",
+                    "24/7 Account Access | World-Class Service",
+                )
+            )
+        )
+    )
+
+    assert len(rows) == 1
+    assert rows[0].description == "SAMPLE DEPOSIT"
+    assert rows[0].continuation_lines == ("ADDITIONAL TRANSFER DETAIL",)
+
+
+def test_parse_activity_rows_legacy_parenthesized_debit() -> None:
+    rows = parse_activity_rows(
+        make_statement_text(
+            "\n".join(  # noqa: FLY002
+                (
+                    "Account Activity",
+                    "Date Description Credits Debits Balance",
+                    "09/01/2022 Beginning Balance $5,500.14 )",
+                    ("09/21/2022 SAMPLE PAYMENT $(5,500.14) $0.00 )"),
+                    "09/30/2022 Ending Balance $0.00 )",
+                    "24/7 Account Access | World-Class Service",
+                )
+            )
+        )
+    )
+
+    assert len(rows) == 1
+    assert rows[0].amount == Decimal("5500.14")
+    assert rows[0].balance == Decimal("0.00")
+    assert (
+        rows[0].section is AmericanExpressBusinessCheckingActivitySection.DEBIT
+    )

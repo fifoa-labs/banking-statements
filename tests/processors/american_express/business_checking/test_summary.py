@@ -67,3 +67,22 @@ def test_parse_balance_summary_requires_ending_balance() -> None:
         parse_balance_summary(
             make_statement_text("BeginningBalance $1,234.56)")
         )
+
+
+def test_parse_balance_summary_legacy_layout() -> None:
+    summary = parse_balance_summary(
+        make_statement_text(
+            "\n".join(  # noqa: FLY002
+                (
+                    "Statement Summary",
+                    "Beginning Balance $100.00 )",
+                    "Total Debits This Period $(25.00)",
+                    "Total Credits This Period $50.00 )",
+                    "Ending Balance $125.00 )",
+                )
+            )
+        )
+    )
+
+    assert summary.opening_balance == Decimal("100.00")
+    assert summary.closing_balance == Decimal("125.00")

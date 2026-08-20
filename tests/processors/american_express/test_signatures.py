@@ -29,13 +29,24 @@ def test_american_express_credit_card_signatures_are_stable() -> None:
 
 
 def test_american_express_business_checking_signatures_are_stable() -> None:
-    assert len(AMERICAN_EXPRESS_BUSINESS_CHECKING_SIGNATURES) == 2
+    assert len(AMERICAN_EXPRESS_BUSINESS_CHECKING_SIGNATURES) == 3
 
     legacy_signature = AMERICAN_EXPRESS_BUSINESS_CHECKING_SIGNATURES[0]
-    current_signature = AMERICAN_EXPRESS_BUSINESS_CHECKING_SIGNATURES[1]
+    compact_signature = AMERICAN_EXPRESS_BUSINESS_CHECKING_SIGNATURES[1]
+    current_signature = AMERICAN_EXPRESS_BUSINESS_CHECKING_SIGNATURES[2]
 
     assert legacy_signature.institution == "american_express"
     assert legacy_signature.required_markers == (
+        "Business Checking Account Statement",
+        "Statement Period",
+        "Account Ending",
+        "Beginning Balance",
+        "Ending Balance",
+        "Account Activity",
+    )
+
+    assert compact_signature.institution == "american_express"
+    assert compact_signature.required_markers == (
         "Business Checking Account Statement",
         "StatementPeriod",
         "AccountEnding",

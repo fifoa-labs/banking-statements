@@ -90,10 +90,34 @@ def test_parse_activity_transactions_rejects_zero_amount() -> None:
         )
 
 
-def test_parse_activity_transactions_rejects_date_before_period() -> None:
+def test_parse_activity_transactions_accepts_previous_day_activity() -> None:
+    transactions = parse_activity_transactions(
+        (
+            AmericanExpressBusinessCheckingActivityRow(
+                transaction_date="03/31/2026",
+                description="INTEREST DEPOSIT",
+                amount=Decimal("3.31"),
+                balance=Decimal("3.31"),
+                section=(
+                    AmericanExpressBusinessCheckingActivitySection.CREDIT
+                ),
+            ),
+        ),
+        period=make_period(),
+    )
+
+    assert len(transactions) == 1
+    assert transactions[0].date == date(2026, 3, 31)
+    assert transactions[0].amount == Decimal("3.31")
+    assert transactions[0].direction is TransactionDirection.CREDIT
+
+
+def test_parse_activity_transactions_rejects_date_before_supported_boundary() -> (  # noqa: E501
+    None
+):
     rows = (
         AmericanExpressBusinessCheckingActivityRow(
-            transaction_date="03/31/2026",
+            transaction_date="03/30/2026",
             description="OUTSIDE PERIOD",
             amount=Decimal("10.00"),
             balance=Decimal("1010.00"),
@@ -105,7 +129,7 @@ def test_parse_activity_transactions_rejects_date_before_period() -> None:
         ValueError,
         match=(
             "American Express business-checking transaction date is "
-            "outside the statement period"
+            "outside the supported statement boundary"
         ),
     ):
         parse_activity_transactions(
@@ -129,7 +153,7 @@ def test_parse_activity_transactions_rejects_date_after_period() -> None:
         ValueError,
         match=(
             "American Express business-checking transaction date is "
-            "outside the statement period"
+            "outside the supported statement boundary"
         ),
     ):
         parse_activity_transactions(
