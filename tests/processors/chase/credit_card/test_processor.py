@@ -75,6 +75,25 @@ def test_processor_matches_historical_structure() -> None:
     assert match.reason == "Matched Chase credit-card statement structure."
 
 
+def test_processor_rejects_business_credit_card_structure() -> None:
+    processor = ChaseCreditCardProcessor()
+
+    match = processor.match(
+        make_statement_text(
+            "\n".join(  # noqa: FLY002
+                (
+                    "www.chase.com/cardhelp",
+                    "Revolving Credit Amount $15,000",
+                    "Opening/Closing Date 05/20/26 - 06/19/26",
+                )
+            )
+        )
+    )
+
+    assert match.matched is False
+    assert match.confidence == 0
+
+
 def test_processor_rejects_unsupported_structure() -> None:
     processor = ChaseCreditCardProcessor()
 
