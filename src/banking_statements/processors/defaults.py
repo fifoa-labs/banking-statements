@@ -37,6 +37,11 @@ from banking_statements.processors.penfed import (
     PenFedHelocProcessor,
 )
 from banking_statements.processors.registry import ProcessorRegistry
+from banking_statements.processors.us_bank import (
+    US_BANK_SIGNATURES,
+    USBankBusinessCheckingProcessor,
+    USBankCreditCardProcessor,
+)
 from banking_statements.processors.wellsfargo import (
     WELLS_FARGO_SIGNATURES,
     WellsFargoBusinessCheckingProcessor,
@@ -57,6 +62,7 @@ def build_default_institution_detector() -> InstitutionDetector:
             *DISCOVER_SIGNATURES,
             *CAPITAL_ONE_SIGNATURES,
             *PENFED_SIGNATURES,
+            *US_BANK_SIGNATURES,
         )
     )
 
@@ -84,5 +90,7 @@ def build_default_processor_registry() -> ProcessorRegistry:
             CapitalOneBusinessCreditCardProcessor(),
             CapitalOneCheckingProcessor(),
             PenFedHelocProcessor(),
+            USBankBusinessCheckingProcessor(),
+            USBankCreditCardProcessor(),
         )
     )
