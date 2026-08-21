@@ -19,6 +19,25 @@ from __future__ import annotations
 
 from banking_statements.processors.detection import InstitutionSignature
 
+CHASE_BUSINESS_CREDIT_CARD_SIGNATURES = (
+    InstitutionSignature(
+        institution="chase",
+        required_markers=(
+            "www.chase.com/ink",
+            "Revolving Credit Amount",
+            "pening/Closing Date",
+        ),
+    ),
+    InstitutionSignature(
+        institution="chase",
+        required_markers=(
+            "chase.com/cardhelp",
+            "Revolving Credit Amount",
+            "pening/Closing Date",
+        ),
+    ),
+)
+
 CHASE_CREDIT_CARD_SIGNATURES = (
     InstitutionSignature(
         institution="chase",
@@ -68,6 +87,7 @@ CHASE_HELOC_SIGNATURES = (
 )
 
 CHASE_SIGNATURES = (
+    *CHASE_BUSINESS_CREDIT_CARD_SIGNATURES,
     *CHASE_CREDIT_CARD_SIGNATURES,
     *CHASE_CHECKING_SIGNATURES,
     *CHASE_HELOC_SIGNATURES,

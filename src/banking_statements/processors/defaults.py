@@ -21,6 +21,7 @@ from banking_statements.processors.capital_one import (
 )
 from banking_statements.processors.chase import (
     CHASE_SIGNATURES,
+    ChaseBusinessCreditCardProcessor,
     ChaseCheckingProcessor,
     ChaseCreditCardProcessor,
     ChaseHelocProcessor,
@@ -65,6 +66,7 @@ def build_default_processor_registry() -> ProcessorRegistry:
     return ProcessorRegistry(
         (
             ChaseCreditCardProcessor(),
+            ChaseBusinessCreditCardProcessor(),
             ChaseCheckingProcessor(),
             ChaseHelocProcessor(),
             WellsFargoCheckingProcessor(),

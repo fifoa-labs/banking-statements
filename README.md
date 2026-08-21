@@ -23,7 +23,7 @@ formats, ambiguous processor matches, malformed recognized data, unknown
 statement behavior, and reconciliation failures during archive validation are
 surfaced explicitly rather than silently ignored or guessed around.
 
-Version `0.8.0` expands the package to six supported institutions:
+Version `0.9.0` expands Chase support with a dedicated business credit-card processor while retaining six supported institutions:
 
 ```text
 Chase
@@ -56,7 +56,7 @@ layer, or Beancount-specific importer.
 Current release:
 
 ```text
-banking-statements 0.8.0
+banking-statements 0.9.0
 ```
 
 Supported Python versions:
@@ -76,6 +76,16 @@ Chase
         modern statement layouts
         historical statement layouts
         co-branded statement layouts
+        observed formats spanning 2019–2026
+
+    business credit card
+        Ink Business Cash statements
+        Ink Business Unlimited statements
+        signed ACCOUNT ACTIVITY transaction tables
+        historical multi-cardholder activity
+        multi-page ACCOUNT ACTIVITY continuation pages
+        payments, refunds, purchases, fees, and interest
+        foreign-currency continuation detail
         observed formats spanning 2019–2026
 
     checking
@@ -197,7 +207,7 @@ LOAN
 The complete private statement archive currently validates:
 
 ```text
-2187 / 2187 PASS
+2276 / 2276 PASS
 reconciliation=PASS
 difference=0.00
 ```
@@ -206,6 +216,15 @@ That archive total consists of the previously proven Chase and Wells Fargo
 corpora plus:
 
 ```text
+Chase business credit card
+    89 / 89 PASS
+
+    Ink Business Cash
+        73 / 73 PASS
+
+    Ink Business Unlimited
+        16 / 16 PASS
+
 American Express
     692 / 692 PASS
 
@@ -298,6 +317,7 @@ Examples include:
 
 ```text
 chase.credit_card.v1
+chase.business_credit_card.v1
 chase.checking.v1
 chase.heloc.v1
 
@@ -353,6 +373,88 @@ reversals
 
 Normalized amounts are positive magnitudes and `TransactionDirection` carries
 the economic direction.
+
+## Chase Business Credit Card Support
+
+Chase business credit-card statements are handled through:
+
+```text
+chase.business_credit_card.v1
+```
+
+The private Chase business credit-card archive currently validates:
+
+```text
+89 / 89 PASS
+reconciliation=PASS
+difference=0.00
+```
+
+That corpus consists of four account archives:
+
+```text
+Ink Business Cash
+    73 / 73 PASS
+
+Ink Business Unlimited
+    16 / 16 PASS
+```
+
+Observed statement formats span 2019 through 2026.
+
+Chase business credit-card statements use a different activity grammar from the
+consumer Chase credit-card processor. Rather than relying on category sections
+such as `PURCHASE` or `PAYMENTS AND OTHER CREDITS`, the supported business-card
+family exposes signed economic rows inside `ACCOUNT ACTIVITY`.
+
+The statement amount carries direction:
+
+```text
+positive amount
+    → DEBIT
+
+negative amount
+    → CREDIT
+```
+
+Normalized `TransactionEvent.amount` values remain positive magnitudes while
+`TransactionDirection` carries the economic direction.
+
+The processor supports:
+
+```text
+purchases
+payments
+merchant refunds and credits
+fees
+interest
+credit-balance refunds
+foreign-currency continuation detail
+historical multi-cardholder activity
+multi-page ACCOUNT ACTIVITY continuation pages
+zero-activity statements
+cross-year transaction dates
+```
+
+Historical business statements can contain multiple cardholder subsections in
+one account-activity table. Each cardholder subtotal is statement bookkeeping,
+not an independent transaction. The processor reconstructs the dated economic
+rows across those subsections without treating cardholder labels or
+`TRANSACTIONS THIS CYCLE` totals as activity.
+
+Modern high-volume statements can continue activity onto later physical pages
+under `ACCOUNT ACTIVITY (CONTINUED)`. The parser preserves transaction order
+across those page boundaries and keeps supported continuation detail attached to
+the correct transaction.
+
+Foreign-currency purchases can expose the original currency and exchange-rate
+detail on following lines. That detail is preserved as source evidence without
+being silently converted into a second economic transaction.
+
+This account family has its own processor rather than broadening
+`chase.credit_card.v1`. Consumer and business Chase credit-card matching are
+kept mutually exclusive so the processor registry retains deterministic,
+single-processor selection.
 
 ## Chase Checking Support
 
@@ -468,7 +570,7 @@ text alone is insufficient to preserve financial meaning.
 ## American Express Support
 
 American Express support was introduced for `0.5.0` and remains included in
-`0.8.0`.
+`0.9.0`.
 
 Supported account families are:
 
@@ -1165,6 +1267,7 @@ Current implemented support:
 ```text
 Chase
     credit card
+    business credit card
     checking
     home-equity line of credit
 
@@ -1199,7 +1302,7 @@ A bank, account family, or statement format is listed as supported only after
 its processor has been implemented and validated against real statement
 evidence.
 
-The complete private development archive currently contains 2187 supported
+The complete private development archive currently contains 2276 supported
 statements, all of which pass extraction, institution detection, processor
 selection, parsing, normalization, and strict reconciliation with zero
 difference.
@@ -1382,8 +1485,18 @@ The typical loop is:
 10. Repeat until the complete corpus reconciles exactly.
 ```
 
-A broader archive scan can be useful for identifying major historical layout
-generations, but fixes are still made one proven grammar boundary at a time.
+For a bounded account family, development may begin with one comprehensive
+investigation capture that includes the relevant processor source, synthetic
+tests, integration points, and extracted text for the complete private corpus.
+A second focused capture can be used when the first investigation exposes a
+larger account-family boundary than originally expected.
+
+This front-loads grammar discovery without changing the evidence standard.
+Private statements remain local evidence only; public repository tests continue
+to use generic synthetic data.
+
+Whether development proceeds chronologically or from a bounded corpus map,
+changes are still made at the smallest proven grammar boundary.
 
 The goal is not merely to make every PDF parse. The goal is to understand why
 each supported statement reconciles.
@@ -1617,11 +1730,12 @@ package without becoming responsibilities of the statement parser itself.
 Current milestone:
 
 ```text
-0.8.0
+0.9.0
     six-institution statement support
 
     Chase
         credit card
+        business credit card
         checking
         home-equity line of credit
 
@@ -1657,7 +1771,7 @@ Current milestone:
     deterministic processor selection
     running-balance validation where exposed by statement evidence
     100% branch coverage
-    2187 / 2187 private statements PASS
+    2276 / 2276 private statements PASS
 ```
 
 Next evidence-driven institution target:
