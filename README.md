@@ -314,6 +314,316 @@ cd banking-statements
 uv sync --dev
 ```
 
+## Using the Package from Another Project
+
+Application code should be institution-independent.
+
+A consuming project should not need to know whether a PDF came from
+Chase, Wells Fargo, American Express, Discover, Capital One, PenFed, or
+U.S. Bank. Institution names, account-family names, processor
+identifiers, folder names, and filename conventions are parser concerns
+owned by `banking-statements`.
+
+The intended application boundary is:
+
+``` text
+PDF file
+    ↓
+banking-statements
+    ↓
+institution detection
+    ↓
+deterministic processor selection
+    ↓
+statement parsing
+    ↓
+ParsedStatement
+```
+
+The caller supplies statement PDFs. The package determines whether each
+statement belongs to a supported institution and which supported
+account-family processor owns its grammar.
+
+This means application code should not contain routing such as:
+
+``` text
+if filename contains "chase":
+    use Chase parser
+
+if folder == "usbank":
+    use U.S. Bank parser
+
+if account ending == "1234":
+    use credit-card parser
+```
+
+Those rules would duplicate knowledge that belongs inside this package.
+
+### Parse one PDF
+
+The current public building blocks can be composed into a small
+institution-independent application function:
+
+``` python
+from hashlib import sha256
+from pathlib import Path
+
+from banking_statements.domain import ParsedStatement, StatementSource
+from banking_statements.processors.defaults import (
+    build_default_institution_detector,
+    build_default_processor_registry,
+)
+from banking_statements.text import PdfStatementTextReader
+
+
+def file_sha256(path: Path) -> str:
+    digest = sha256()
+
+    with path.open("rb") as source_file:
+        while chunk := source_file.read(1024 * 1024):
+            digest.update(chunk)
+
+    return digest.hexdigest()
+
+
+def parse_statement(path: Path) -> ParsedStatement:
+    source = StatementSource(
+        path=path,
+        sha256=file_sha256(path),
+    )
+
+    text = PdfStatementTextReader().read(source)
+
+    detector = build_default_institution_detector()
+    detector.detect(text)
+
+    registry = build_default_processor_registry()
+    processor = registry.select(text)
+
+    return processor.parse(source, text)
+```
+
+Usage:
+
+``` python
+from pathlib import Path
+
+statement = parse_statement(Path("statement.pdf"))
+
+print(statement.account)
+print(statement.period)
+print(statement.balances)
+
+for transaction in statement.transactions:
+    print(
+        transaction.date,
+        transaction.direction,
+        transaction.amount,
+        transaction.description,
+    )
+```
+
+The calling project does not select an institution or processor.
+Detection and processor ownership are resolved from statement evidence.
+
+### Parse a folder of mixed statements
+
+A folder may contain statements from different supported institutions
+and account families.
+
+The directory hierarchy is not parser input. Filenames are not parser
+input. They are useful for human organization only.
+
+For example, all of these are valid application inputs:
+
+``` text
+statements/
+├── chase/
+│   └── checking/
+│       └── 2026-07.pdf
+├── usbank/
+│   └── credit-card/
+│       └── 2026-07.pdf
+└── capitalone/
+    └── checking/
+        └── 2026-07.pdf
+```
+
+or the same PDFs flattened and renamed:
+
+``` text
+statements/
+├── 000001.pdf
+├── banana.pdf
+├── document-final.pdf
+├── random-name-42.pdf
+└── x.pdf
+```
+
+For supported statement grammars, parsing should produce the same
+normalized result in either layout because routing is based on PDF
+evidence rather than path conventions.
+
+A consuming project can recursively process a mixed folder:
+
+``` python
+from pathlib import Path
+
+folder = Path("statements")
+
+for path in sorted(folder.rglob("*.pdf")):
+    statement = parse_statement(path)
+
+    print(
+        path,
+        statement.account.account_type,
+        statement.account.last_four,
+        statement.period.start,
+        statement.period.end,
+        len(statement.transactions),
+    )
+```
+
+The same loop can process one institution, seven institutions, or any
+future institution added to the package without adding
+institution-specific routing to the consuming application.
+
+### Reconcile parsed statements
+
+Parsing and reconciliation remain separate operations:
+
+``` python
+from banking_statements.reconciliation import reconcile_statement
+
+statement = parse_statement(Path("statement.pdf"))
+reconciliation = reconcile_statement(statement)
+
+if not reconciliation.reconciled:
+    raise ValueError(
+        f"statement did not reconcile: {reconciliation.difference}"
+    )
+```
+
+Applications can choose their own reconciliation policy. The private
+archive smoke tooling treats reconciliation mismatches as failures
+because it is a strict development-validation environment.
+
+### Mixed-folder behavior
+
+For each PDF, the package follows the same deterministic sequence:
+
+``` text
+read PDF
+    ↓
+detect exactly one supported institution
+    ↓
+select exactly one compatible processor
+    ↓
+parse identity, period, balances, and activity
+    ↓
+return ParsedStatement
+```
+
+If the PDF belongs to an unsupported institution or unsupported
+statement grammar, parsing fails explicitly.
+
+If institution evidence is ambiguous, detection fails explicitly.
+
+If zero processors match the recognized statement, processor selection
+fails explicitly.
+
+If multiple processors match, processor selection fails explicitly
+rather than using registration order, a filename, or a directory name to
+guess.
+
+This is intentional. A successful parse should mean that the package
+recognized and understood a proven statement grammar.
+
+### Independence from institutions
+
+`banking-statements` is institution-aware internally and
+institution-independent at the application boundary.
+
+Internally, the package must understand institution-specific evidence
+because real banks publish different statement grammars:
+
+``` text
+application
+    │
+    │ generic PDF input
+    ▼
+banking-statements
+    ├── institution detection
+    ├── Chase processors
+    ├── Wells Fargo processors
+    ├── American Express processors
+    ├── Discover processors
+    ├── Capital One processors
+    ├── PenFed processors
+    └── U.S. Bank processors
+    │
+    │ normalized domain output
+    ▼
+application
+```
+
+The consuming application should normally care about normalized concepts
+such as:
+
+``` text
+AccountType
+AccountIdentity
+StatementPeriod
+StatementBalanceSummary
+TransactionEvent
+TransactionDirection
+ParsedStatement
+```
+
+It should not need to know which institution-specific parser produced
+them unless that provenance is useful for auditing or diagnostics.
+
+This separation is a core design goal: adding a new supported
+institution or account family should expand what the same application
+integration can parse without requiring the application to add a new
+institution-specific branch.
+
+### Folder organization is optional
+
+The private development corpus is organized by institution and account
+family because that structure is useful for maintenance, historical
+investigation, targeted smoke runs, and human navigation.
+
+It is not required for runtime identification.
+
+Conceptually, these two corpora are equivalent parser inputs:
+
+``` text
+organized/
+├── chase/
+├── wellsfargo/
+├── american-express/
+├── discover/
+├── capitalone/
+├── penfed/
+└── usbank/
+```
+
+and:
+
+``` text
+flat/
+├── 000001.pdf
+├── 000002.pdf
+├── 000003.pdf
+└── ...
+```
+
+provided the files themselves are unchanged and each statement grammar
+is supported.
+
+The PDF is the source of truth.
+
 ## Basic Usage
 
 The package exposes generic domain primitives plus implemented statement
