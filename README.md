@@ -23,7 +23,7 @@ formats, ambiguous processor matches, malformed recognized data, unknown
 statement behavior, and reconciliation failures during archive validation are
 surfaced explicitly rather than silently ignored or guessed around.
 
-Version `0.7.0` expands the package to five supported institutions:
+Version `0.8.0` expands the package to six supported institutions:
 
 ```text
 Chase
@@ -31,6 +31,7 @@ Wells Fargo
 American Express
 Discover
 Capital One
+PenFed
 ```
 
 Implemented processors cover consumer and business deposit accounts, credit
@@ -55,7 +56,7 @@ layer, or Beancount-specific importer.
 Current release:
 
 ```text
-banking-statements 0.7.0
+banking-statements 0.8.0
 ```
 
 Supported Python versions:
@@ -153,6 +154,18 @@ Capital One
         wrapped transfer descriptions and reference lines
         zero-activity statements
         observed formats spanning 2022–2026
+
+PenFed
+    home-equity line of credit
+        monthly HELOC statements
+        principal curtailment payments
+        payment receipt and allocation behavior
+        returned-payment and NSF reversals
+        returned-check fee assessment and reversal
+        finance-charge parsing and validation
+        legacy single-date activity tables
+        current process/effective-date activity tables
+        observed formats spanning 2024–2026
 ```
 
 Current normalized domain includes:
@@ -184,7 +197,7 @@ LOAN
 The complete private statement archive currently validates:
 
 ```text
-2162 / 2162 PASS
+2187 / 2187 PASS
 reconciliation=PASS
 difference=0.00
 ```
@@ -213,6 +226,9 @@ Capital One
 
     checking
         75 / 75 PASS
+
+PenFed HELOC
+    25 / 25 PASS
 ```
 
 Quality gates include Ruff, strict mypy, pytest, 100% branch coverage,
@@ -244,8 +260,8 @@ uv sync --dev
 ## Basic Usage
 
 The package exposes generic domain primitives plus implemented statement
-processors for supported Chase, Wells Fargo, American Express, Discover, and
-Capital One statement families.
+processors for supported Chase, Wells Fargo, American Express, Discover,
+Capital One, and PenFed statement families.
 
 ```python
 from datetime import date
@@ -291,6 +307,8 @@ discover.credit_card.v1
 capital_one.credit_card.v1
 capital_one.business_credit_card.v1
 capital_one.checking.v1
+
+penfed.heloc.v1
 ```
 
 Processor identity is part of source evidence and should remain stable for a
@@ -450,7 +468,7 @@ text alone is insufficient to preserve financial meaning.
 ## American Express Support
 
 American Express support was introduced for `0.5.0` and remains included in
-`0.7.0`.
+`0.8.0`.
 
 Supported account families are:
 
@@ -769,6 +787,50 @@ complete statement
 The two observed account archives share the same 360 Checking grammar, so they
 are handled by one processor rather than duplicated account-specific
 implementations.
+
+## PenFed HELOC Support
+
+PenFed home-equity line-of-credit statements are handled through:
+
+```text
+penfed.heloc.v1
+```
+
+The private PenFed HELOC archive currently validates:
+
+```text
+25 / 25 PASS
+reconciliation=PASS
+difference=0.00
+```
+
+Observed statement formats span 2024 through 2026.
+
+The processor supports statement identity, reporting periods, opening and
+closing balances, principal curtailment payments, payment receipts, returned
+payments, NSF reversals, returned-check fee activity, and cycle finance
+charges.
+
+PenFed HELOC activity contains multiple bookkeeping views of the same payment.
+A received payment can be accompanied by a separate allocation row showing how
+that payment was applied to interest or principal. The processor distinguishes
+actual economic activity from allocation detail so payments are not
+double-counted.
+
+Returned-payment cycles are handled explicitly. Fee assessments, fee reversals,
+principal or interest reversals, replacement payments, and other recognized
+activity are normalized according to their effect on the debt balance rather
+than inferred from the summary totals.
+
+Two proven activity-table grammars are supported. Earlier statements expose a
+single transaction date, while the current observed layout exposes separate
+process and effective dates. These layouts remain within one processor because
+the corpus demonstrates a stable PenFed HELOC statement family with an explicit
+grammar boundary.
+
+Finance charges are parsed from the statement's finance-charge section and
+participate in debt-account reconciliation. Summary values remain independent
+validation checkpoints rather than substitutes for transaction activity.
 
 ## Statement Balances
 
@@ -1128,13 +1190,16 @@ Capital One
     credit card
     business credit card
     checking
+
+PenFed
+    home-equity line of credit
 ```
 
 A bank, account family, or statement format is listed as supported only after
 its processor has been implemented and validated against real statement
 evidence.
 
-The complete private development archive currently contains 2162 supported
+The complete private development archive currently contains 2187 supported
 statements, all of which pass extraction, institution detection, processor
 selection, parsing, normalization, and strict reconciliation with zero
 difference.
@@ -1154,6 +1219,7 @@ private-data/
     ├── american-express/
     ├── discover/
     ├── capitalone/
+    ├── penfed/
     └── ...
 ```
 
@@ -1551,8 +1617,8 @@ package without becoming responsibilities of the statement parser itself.
 Current milestone:
 
 ```text
-0.7.0
-    five-institution statement support
+0.8.0
+    six-institution statement support
 
     Chase
         credit card
@@ -1582,13 +1648,16 @@ Current milestone:
         business credit card
         checking
 
+    PenFed
+        home-equity line of credit
+
     account-type-aware reconciliation
     layout-aware PDF evidence
     strict institution detection
     deterministic processor selection
     running-balance validation where exposed by statement evidence
     100% branch coverage
-    2162 / 2162 private statements PASS
+    2187 / 2187 private statements PASS
 ```
 
 Next evidence-driven institution target:
