@@ -27,10 +27,10 @@ data, unknown statement behavior, and reconciliation failures during
 archive validation are surfaced explicitly rather than silently ignored
 or guessed around.
 
-Version `0.10.0` adds U.S. Bank support, expanding the package to seven
-supported institutions:
+Version `0.11.0` adds a first-class high-level parsing API while retaining
+the seven supported institutions introduced through `0.10.0`:
 
-``` text
+```text
 Chase
 Wells Fargo
 American Express
@@ -62,13 +62,23 @@ database layer, or Beancount-specific importer.
 
 Current release:
 
-``` text
-banking-statements 0.10.0
+```text
+banking-statements 0.11.0
 ```
+
+Primary application API:
+
+```python
+from banking_statements import parse_statement, parse_statements
+```
+
+The high-level API performs PDF reading, institution detection, deterministic
+processor selection, parsing, and reconciliation through one canonical package
+pipeline.
 
 Supported Python versions:
 
-``` text
+```text
 Python 3.11
 Python 3.12
 Python 3.13
@@ -77,7 +87,7 @@ Python 3.14
 
 Current implemented statement support:
 
-``` text
+```text
 Chase
     credit card
         modern statement layouts
@@ -209,7 +219,7 @@ U.S. Bank
 
 Current normalized domain includes:
 
-``` text
+```text
 StatementSource
 SourceEvidence
 StatementPeriod
@@ -225,7 +235,7 @@ TransactionDirection
 
 Supported account types currently include:
 
-``` text
+```text
 CHECKING
 SAVINGS
 CREDIT_CARD
@@ -235,7 +245,7 @@ LOAN
 
 The complete private statement archive currently validates:
 
-``` text
+```text
 2381 / 2381 PASS
 reconciliation=PASS
 difference=0.00
@@ -244,7 +254,7 @@ difference=0.00
 That archive total consists of the previously proven Chase and Wells
 Fargo corpora plus:
 
-``` text
+```text
 Chase business credit card
     89 / 89 PASS
 
@@ -296,19 +306,19 @@ installation, and full private-archive smoke validation.
 
 Install from PyPI:
 
-``` bash
+```bash
 pip install banking-statements
 ```
 
 With `uv`:
 
-``` bash
+```bash
 uv add banking-statements
 ```
 
 Or for development:
 
-``` bash
+```bash
 git clone https://github.com/fifoa-labs/banking-statements.git
 cd banking-statements
 uv sync --dev
@@ -318,18 +328,28 @@ uv sync --dev
 
 Application code should be institution-independent.
 
-A consuming project should not need to know whether a PDF came from
-Chase, Wells Fargo, American Express, Discover, Capital One, PenFed, or
-U.S. Bank. Institution names, account-family names, processor
-identifiers, folder names, and filename conventions are parser concerns
-owned by `banking-statements`.
+A consuming project should not need to know whether a PDF came from Chase,
+Wells Fargo, American Express, Discover, Capital One, PenFed, or U.S. Bank.
+Institution names, account-family names, processor identifiers, folder names,
+and filename conventions are parser concerns owned by `banking-statements`.
 
-The intended application boundary is:
+Version `0.11.0` provides a first-class public API for the complete supported
+pipeline:
 
-``` text
-PDF file
+```python
+from banking_statements import parse_statement
+
+result = parse_statement("statement.pdf")
+```
+
+The caller supplies a PDF path. The package owns:
+
+```text
+PDF path
     ↓
-banking-statements
+source hashing
+    ↓
+page-aware PDF extraction
     ↓
 institution detection
     ↓
@@ -337,82 +357,59 @@ deterministic processor selection
     ↓
 statement parsing
     ↓
-ParsedStatement
+account-type-aware reconciliation
+    ↓
+StatementParseResult
 ```
 
-The caller supplies statement PDFs. The package determines whether each
-statement belongs to a supported institution and which supported
-account-family processor owns its grammar.
-
-This means application code should not contain routing such as:
-
-``` text
-if filename contains "chase":
-    use Chase parser
-
-if folder == "usbank":
-    use U.S. Bank parser
-
-if account ending == "1234":
-    use credit-card parser
-```
-
-Those rules would duplicate knowledge that belongs inside this package.
+Downstream applications should not construct `StatementSource`,
+`PdfStatementTextReader`, `InstitutionDetector`, or `ProcessorRegistry` for
+normal parsing. Those lower-level components remain available for testing,
+debugging, custom tooling, and processor development, but the supported
+application entry point is the high-level API.
 
 ### Parse one PDF
 
-The current public building blocks can be composed into a small
-institution-independent application function:
+Import the public API directly from the package:
 
-``` python
-from hashlib import sha256
-from pathlib import Path
+```python
+from banking_statements import parse_statement
 
-from banking_statements.domain import ParsedStatement, StatementSource
-from banking_statements.processors.defaults import (
-    build_default_institution_detector,
-    build_default_processor_registry,
-)
-from banking_statements.text import PdfStatementTextReader
-
-
-def file_sha256(path: Path) -> str:
-    digest = sha256()
-
-    with path.open("rb") as source_file:
-        while chunk := source_file.read(1024 * 1024):
-            digest.update(chunk)
-
-    return digest.hexdigest()
-
-
-def parse_statement(path: Path) -> ParsedStatement:
-    source = StatementSource(
-        path=path,
-        sha256=file_sha256(path),
-    )
-
-    text = PdfStatementTextReader().read(source)
-
-    detector = build_default_institution_detector()
-    detector.detect(text)
-
-    registry = build_default_processor_registry()
-    processor = registry.select(text)
-
-    return processor.parse(source, text)
+result = parse_statement("statement.pdf")
 ```
 
-Usage:
+`parse_statement()` accepts either a `str` or `Path` and returns:
 
-``` python
+```text
+StatementParseResult
+    statement
+    reconciliation
+    page_count
+```
+
+Example:
+
+```python
 from pathlib import Path
 
-statement = parse_statement(Path("statement.pdf"))
+from banking_statements import parse_statement
 
-print(statement.account)
-print(statement.period)
-print(statement.balances)
+result = parse_statement(Path("statement.pdf"))
+
+statement = result.statement
+reconciliation = result.reconciliation
+
+print(statement.institution)
+print(statement.processor)
+print(statement.account.account_type)
+print(statement.account.last4)
+print(statement.period.start)
+print(statement.period.end)
+print(statement.balances.opening_balance)
+print(statement.balances.closing_balance)
+print(result.page_count)
+print(reconciliation.reconciled)
+print(reconciliation.difference)
 
 for transaction in statement.transactions:
     print(
@@ -423,20 +420,25 @@ for transaction in statement.transactions:
     )
 ```
 
-The calling project does not select an institution or processor.
-Detection and processor ownership are resolved from statement evidence.
+The calling project does not select an institution or account-family processor.
+Those decisions are made from evidence inside the PDF.
 
-### Parse a folder of mixed statements
+### Parse a directory of mixed statements
 
-A folder may contain statements from different supported institutions
-and account families.
+Use `parse_statements()` for one PDF or a directory tree:
 
-The directory hierarchy is not parser input. Filenames are not parser
-input. They are useful for human organization only.
+```python
+from banking_statements import parse_statements
 
-For example, all of these are valid application inputs:
+results = parse_statements("statements")
+```
 
-``` text
+When a directory is supplied, the package recursively discovers PDF files and
+processes them in deterministic path order.
+
+For example, all of these are valid inputs:
+
+```text
 statements/
 ├── chase/
 │   └── checking/
@@ -451,7 +453,7 @@ statements/
 
 or the same PDFs flattened and renamed:
 
-``` text
+```text
 statements/
 ├── 000001.pdf
 ├── banana.pdf
@@ -460,145 +462,180 @@ statements/
 └── x.pdf
 ```
 
-For supported statement grammars, parsing should produce the same
-normalized result in either layout because routing is based on PDF
-evidence rather than path conventions.
+The directory hierarchy and filenames are not used to determine institution or
+processor ownership. They are useful for human organization only.
 
-A consuming project can recursively process a mixed folder:
+For supported statement grammars, the same PDF should produce the same parsed
+result regardless of where it is stored or what the file is named.
 
-``` python
-from pathlib import Path
+Example:
 
-folder = Path("statements")
+```python
+from banking_statements import parse_statements
 
-for path in sorted(folder.rglob("*.pdf")):
-    statement = parse_statement(path)
+for result in parse_statements("statements"):
+    statement = result.statement
 
     print(
-        path,
+        statement.source.path,
+        statement.institution,
         statement.account.account_type,
-        statement.account.last_four,
+        statement.account.last4,
         statement.period.start,
         statement.period.end,
         len(statement.transactions),
+        result.reconciliation.reconciled,
     )
 ```
 
-The same loop can process one institution, seven institutions, or any
-future institution added to the package without adding
-institution-specific routing to the consuming application.
+The same application loop can process one institution, seven institutions, or
+future institutions added to the package without adding institution-specific
+routing to the consuming project.
 
-### Reconcile parsed statements
+### `StatementParseResult`
 
-Parsing and reconciliation remain separate operations:
+The high-level API returns both the normalized statement and its reconciliation
+result:
 
-``` python
-from banking_statements.reconciliation import reconcile_statement
+```python
+result.statement
+result.reconciliation
+result.page_count
+```
 
-statement = parse_statement(Path("statement.pdf"))
-reconciliation = reconcile_statement(statement)
+`result.statement` is the normalized `ParsedStatement`.
 
-if not reconciliation.reconciled:
+`result.reconciliation` is the account-type-aware
+`StatementReconciliation` produced from that parsed statement.
+
+`result.page_count` preserves the number of extracted PDF pages, which is useful
+for diagnostics, audit output, and development smoke tooling.
+
+Reconciliation remains non-destructive. A mismatch does not alter or rewrite
+the parsed statement.
+
+Applications decide whether a mismatch should be accepted, warned about, or
+treated as an error:
+
+```python
+from banking_statements import parse_statement
+
+result = parse_statement("statement.pdf")
+
+if not result.reconciliation.reconciled:
     raise ValueError(
-        f"statement did not reconcile: {reconciliation.difference}"
+        "statement did not reconcile: "
+        f"{result.reconciliation.difference}"
     )
 ```
 
-Applications can choose their own reconciliation policy. The private
-archive smoke tooling treats reconciliation mismatches as failures
-because it is a strict development-validation environment.
+The private archive smoke tool uses a stricter policy and treats reconciliation
+mismatches as failures by default.
 
-### Mixed-folder behavior
+### Deterministic failure behavior
 
-For each PDF, the package follows the same deterministic sequence:
+For every PDF, the public API follows the same deterministic sequence:
 
-``` text
+```text
 read PDF
     ↓
 detect exactly one supported institution
     ↓
 select exactly one compatible processor
     ↓
-parse identity, period, balances, and activity
+parse the supported grammar
     ↓
-return ParsedStatement
+reconcile the normalized statement
+    ↓
+return StatementParseResult
 ```
 
-If the PDF belongs to an unsupported institution or unsupported
-statement grammar, parsing fails explicitly.
+Failures remain explicit.
 
-If institution evidence is ambiguous, detection fails explicitly.
+If no institution signature matches:
 
-If zero processors match the recognized statement, processor selection
-fails explicitly.
+```text
+UnsupportedInstitutionError
+```
 
-If multiple processors match, processor selection fails explicitly
-rather than using registration order, a filename, or a directory name to
-guess.
+If multiple institutions match:
 
-This is intentional. A successful parse should mean that the package
-recognized and understood a proven statement grammar.
+```text
+AmbiguousInstitutionError
+```
 
-### Independence from institutions
+If the institution is recognized but no processor supports the document:
+
+```text
+UnsupportedStatementError
+```
+
+If multiple processors claim the same statement:
+
+```text
+AmbiguousProcessorError
+```
+
+The package does not use processor registration order, directory names,
+filenames, or account-number heuristics to guess around ambiguity.
+
+### Institution-independent application boundary
 
 `banking-statements` is institution-aware internally and
 institution-independent at the application boundary.
 
-Internally, the package must understand institution-specific evidence
-because real banks publish different statement grammars:
+Internally:
 
-``` text
-application
-    │
-    │ generic PDF input
-    ▼
+```text
 banking-statements
-    ├── institution detection
-    ├── Chase processors
-    ├── Wells Fargo processors
-    ├── American Express processors
-    ├── Discover processors
-    ├── Capital One processors
-    ├── PenFed processors
-    └── U.S. Bank processors
-    │
-    │ normalized domain output
-    ▼
-application
+├── institution signatures
+├── Chase processors
+├── Wells Fargo processors
+├── American Express processors
+├── Discover processors
+├── Capital One processors
+├── PenFed processors
+└── U.S. Bank processors
 ```
 
-The consuming application should normally care about normalized concepts
-such as:
+Externally:
 
-``` text
+```python
+from banking_statements import parse_statement, parse_statements
+```
+
+A consuming application should normally care about normalized concepts such as:
+
+```text
+ParsedStatement
 AccountType
 AccountIdentity
 StatementPeriod
 StatementBalanceSummary
 TransactionEvent
 TransactionDirection
-ParsedStatement
+StatementReconciliation
+StatementParseResult
 ```
 
-It should not need to know which institution-specific parser produced
-them unless that provenance is useful for auditing or diagnostics.
+It should not need to know which institution-specific parser produced them
+unless that provenance is useful for diagnostics or auditing.
 
-This separation is a core design goal: adding a new supported
-institution or account family should expand what the same application
-integration can parse without requiring the application to add a new
-institution-specific branch.
+Adding a new supported institution or account family should expand what the same
+downstream integration can parse without requiring the consuming application to
+add a new institution-specific branch.
 
 ### Folder organization is optional
 
-The private development corpus is organized by institution and account
-family because that structure is useful for maintenance, historical
-investigation, targeted smoke runs, and human navigation.
+The private development corpus is organized by institution and account family
+because that structure is useful for maintenance, historical investigation,
+targeted smoke runs, and human navigation.
 
 It is not required for runtime identification.
 
-Conceptually, these two corpora are equivalent parser inputs:
+Conceptually, these corpora are equivalent parser inputs:
 
-``` text
+```text
 organized/
 ├── chase/
 ├── wellsfargo/
@@ -611,7 +648,7 @@ organized/
 
 and:
 
-``` text
+```text
 flat/
 ├── 000001.pdf
 ├── 000002.pdf
@@ -619,18 +656,23 @@ flat/
 └── ...
 ```
 
-provided the files themselves are unchanged and each statement grammar
-is supported.
+provided the PDFs themselves are unchanged and their statement grammars are
+supported.
 
 The PDF is the source of truth.
 
 ## Basic Usage
 
-The package exposes generic domain primitives plus implemented statement
-processors for supported Chase, Wells Fargo, American Express, Discover,
-Capital One, PenFed, and U.S. Bank statement families.
+For normal application parsing, prefer the high-level API:
 
-``` python
+```python
+from banking_statements import parse_statement, parse_statements
+```
+
+The package also exposes generic domain primitives for applications that need
+to construct, inspect, test, or transform normalized banking objects directly.
+
+```python
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -663,7 +705,7 @@ transaction = TransactionEvent(
 Stable processor identifiers are intentionally account-family specific.
 Examples include:
 
-``` text
+```text
 chase.credit_card.v1
 chase.business_credit_card.v1
 chase.checking.v1
@@ -689,7 +731,7 @@ for a supported grammar.
 
 Chase credit-card statements are handled through:
 
-``` text
+```text
 chase.credit_card.v1
 ```
 
@@ -711,7 +753,7 @@ last four digits when available.
 
 Supported activity includes:
 
-``` text
+```text
 purchases
 payments
 merchant credits
@@ -730,13 +772,13 @@ carries the economic direction.
 
 Chase business credit-card statements are handled through:
 
-``` text
+```text
 chase.business_credit_card.v1
 ```
 
 The private Chase business credit-card archive currently validates:
 
-``` text
+```text
 89 / 89 PASS
 reconciliation=PASS
 difference=0.00
@@ -744,7 +786,7 @@ difference=0.00
 
 That corpus consists of four account archives:
 
-``` text
+```text
 Ink Business Cash
     73 / 73 PASS
 
@@ -762,7 +804,7 @@ the supported business-card family exposes signed economic rows inside
 
 The statement amount carries direction:
 
-``` text
+```text
 positive amount
     → DEBIT
 
@@ -775,7 +817,7 @@ while `TransactionDirection` carries the economic direction.
 
 The processor supports:
 
-``` text
+```text
 purchases
 payments
 merchant refunds and credits
@@ -815,14 +857,14 @@ deterministic, single-processor selection.
 
 Chase checking statements are handled through:
 
-``` text
+```text
 chase.checking.v1
 ```
 
 The processor has been validated against a private chronological corpus
 of 182 statements spanning observed formats from 2019 through 2026:
 
-``` text
+```text
 182 / 182 PASS
 reconciliation=PASS
 difference=0.00
@@ -838,14 +880,14 @@ reconciliation.
 Checking transaction rows are reconstructed from statement text shaped
 like:
 
-``` text
+```text
 DATE DESCRIPTION AMOUNT BALANCE
 ```
 
 The signed statement amount is interpreted from the checking account's
 perspective:
 
-``` text
+```text
 positive amount
     → CREDIT
 
@@ -870,7 +912,7 @@ optional source evidence.
 
 Chase home-equity line-of-credit statements are handled through:
 
-``` text
+```text
 chase.heloc.v1
 ```
 
@@ -878,7 +920,7 @@ The processor has been validated against a private chronological corpus
 of 28 monthly statements spanning observed formats from 2020 through
 2022:
 
-``` text
+```text
 28 / 28 PASS
 reconciliation=PASS
 difference=0.00
@@ -909,7 +951,7 @@ statements where the reported balance is negative.
 
 Wells Fargo support covers:
 
-``` text
+```text
 checking
 credit card
 business checking
@@ -933,11 +975,11 @@ meaning.
 ## American Express Support
 
 American Express support was introduced for `0.5.0` and remains included
-in `0.10.0`.
+in `0.11.0`.
 
 Supported account families are:
 
-``` text
+```text
 personal credit card
 business credit card
 business checking
@@ -947,7 +989,7 @@ personal loan
 
 The complete American Express private archive currently validates:
 
-``` text
+```text
 692 / 692 PASS
 reconciliation=PASS
 difference=0.00
@@ -963,7 +1005,7 @@ card-ending sections and supported continuation detail.
 Business checking support normalizes deposit-account activity and uses
 asset-account reconciliation:
 
-``` text
+```text
 opening balance
 + credits
 - debits
@@ -973,7 +1015,7 @@ opening balance
 Business line-of-credit and personal-loan support use debt-account
 reconciliation:
 
-``` text
+```text
 opening balance
 + debits
 - credits
@@ -988,14 +1030,14 @@ inside one processor.
 
 Discover checking statements are handled through:
 
-``` text
+```text
 discover.checking.v1
 ```
 
 The processor has been validated against two private account archives
 totaling 200 monthly statements:
 
-``` text
+```text
 200 / 200 PASS
 reconciliation=PASS
 difference=0.00
@@ -1005,13 +1047,13 @@ Observed statement formats span 2018 through 2026.
 
 The supported archive includes the evolution from:
 
-``` text
+```text
 CASHBACK CHECKING
 ```
 
 to:
 
-``` text
+```text
 CASHBACK DEBIT
 ```
 
@@ -1020,7 +1062,7 @@ current `Discover.com` branding.
 
 The processor supports:
 
-``` text
+```text
 legacy account-ending identity
 current full account-number identity
 statement-period parsing
@@ -1038,14 +1080,14 @@ zero-activity statements
 
 Discover checking activity historically used:
 
-``` text
+```text
 Eff. Date
 Bus. Date
 ```
 
 and later:
 
-``` text
+```text
 Eff. Date
 Syst. Date
 ```
@@ -1058,13 +1100,13 @@ the transaction is generally processed and posted.
 
 Discover credit-card statements are handled through:
 
-``` text
+```text
 discover.credit_card.v1
 ```
 
 The private Discover credit-card archive currently validates:
 
-``` text
+```text
 70 / 70 PASS
 reconciliation=PASS
 difference=0.00
@@ -1076,7 +1118,7 @@ Two major statement grammars are supported.
 
 Legacy statements expose separate transaction and posting dates:
 
-``` text
+```text
 Trans. Date
 Post Date
 ```
@@ -1092,7 +1134,7 @@ reports that activity in the current cycle.
 
 Supported economic activity includes:
 
-``` text
+```text
 payments and credits
 purchases
 fees
@@ -1112,14 +1154,14 @@ but is not silently appended to the transaction description.
 
 Capital One consumer credit-card statements are handled through:
 
-``` text
+```text
 capital_one.credit_card.v1
 ```
 
 The private Capital One consumer credit-card archive currently
 validates:
 
-``` text
+```text
 38 / 38 PASS
 reconciliation=PASS
 difference=0.00
@@ -1129,7 +1171,7 @@ Observed Venture X statement formats span 2023 through 2026.
 
 The processor supports:
 
-``` text
+```text
 statement identity and billing periods
 opening and closing balances
 cardholder-scoped payments and credits
@@ -1160,13 +1202,13 @@ activity.
 
 Capital One business credit-card statements are handled through:
 
-``` text
+```text
 capital_one.business_credit_card.v1
 ```
 
 The private business credit-card archive currently validates:
 
-``` text
+```text
 86 / 86 PASS
 reconciliation=PASS
 difference=0.00
@@ -1174,7 +1216,7 @@ difference=0.00
 
 That corpus consists of:
 
-``` text
+```text
 Spark
     82 / 82 PASS
 
@@ -1205,13 +1247,13 @@ only the sections proven for the matched product grammar.
 
 Capital One 360 Checking statements are handled through:
 
-``` text
+```text
 capital_one.checking.v1
 ```
 
 The private checking archive currently validates:
 
-``` text
+```text
 75 / 75 PASS
 reconciliation=PASS
 difference=0.00
@@ -1222,7 +1264,7 @@ monthly and quarterly reporting behavior.
 
 Supported behavior includes:
 
-``` text
+```text
 full account identity
 statement-period parsing
 monthly statement periods
@@ -1246,7 +1288,7 @@ reconciliation.
 
 This provides two independent checks:
 
-``` text
+```text
 transaction row
     → running-balance validation
 
@@ -1262,13 +1304,13 @@ account-specific implementations.
 
 PenFed home-equity line-of-credit statements are handled through:
 
-``` text
+```text
 penfed.heloc.v1
 ```
 
 The private PenFed HELOC archive currently validates:
 
-``` text
+```text
 25 / 25 PASS
 reconciliation=PASS
 difference=0.00
@@ -1307,13 +1349,13 @@ transaction activity.
 
 U.S. Bank business checking statements are handled through:
 
-``` text
+```text
 us_bank.business_checking.v1
 ```
 
 The private Silver Business Checking archive currently validates:
 
-``` text
+```text
 35 / 35 PASS
 reconciliation=PASS
 difference=0.00
@@ -1329,7 +1371,7 @@ balances, compact extracted dates, and cross-year transaction dates.
 
 Economic direction follows the deposit account's perspective:
 
-``` text
+```text
 balance-increasing activity
     → CREDIT
 
@@ -1346,13 +1388,13 @@ statement reports them as real account activity.
 
 U.S. Bank credit-card statements are handled through:
 
-``` text
+```text
 us_bank.credit_card.v1
 ```
 
 The private U.S. Bank credit-card archive currently validates:
 
-``` text
+```text
 70 / 70 PASS
 reconciliation=PASS
 difference=0.00
@@ -1368,7 +1410,7 @@ source evidence rather than a processor boundary.
 
 The processor supports:
 
-``` text
+```text
 Activity Summary balance checkpoints
 Payments and Other Credits
 Purchases and Other Debits
@@ -1406,7 +1448,7 @@ therefore follows document structure rather than card-product names.
 
 Supported statements expose generic balance checkpoints:
 
-``` python
+```python
 StatementBalanceSummary(
     opening_balance=...,
     closing_balance=...,
@@ -1422,19 +1464,32 @@ activity explains the reported balance movement.
 
 ## Reconciliation
 
-Reconciliation is optional and separate from parsing.
+The high-level parsing API performs reconciliation automatically and returns it
+alongside the parsed statement:
 
-``` python
+```python
+from banking_statements import parse_statement
+
+result = parse_statement("statement.pdf")
+
+statement = result.statement
+reconciliation = result.reconciliation
+```
+
+The lower-level reconciliation function remains available when an application
+already has a `ParsedStatement`:
+
+```python
 from banking_statements.reconciliation import reconcile_statement
 
-result = reconcile_statement(statement)
+reconciliation = reconcile_statement(statement)
 ```
 
 Reconciliation is account-type aware.
 
 For debt accounts such as credit cards, lines of credit, and loans:
 
-``` text
+```text
 opening balance
 + parsed debits
 - parsed credits
@@ -1443,7 +1498,7 @@ opening balance
 
 For asset accounts such as checking and savings:
 
-``` text
+```text
 opening balance
 + parsed credits
 - parsed debits
@@ -1466,7 +1521,7 @@ economically complete.
 
 Financial values use `Decimal`.
 
-``` python
+```python
 from decimal import Decimal
 
 from banking_statements import to_decimal
@@ -1487,7 +1542,7 @@ direction is represented separately by `TransactionDirection`.
 Normalized statement data should remain traceable to the source
 statement.
 
-``` python
+```python
 from pathlib import Path
 
 from banking_statements import SourceEvidence, StatementSource
@@ -1509,7 +1564,7 @@ evidence = SourceEvidence(
 
 Evidence can preserve information such as:
 
-``` text
+```text
 source file identity
 page
 section
@@ -1525,8 +1580,10 @@ future statement revisions, and verifying reconciliation decisions.
 
 The implemented processing pipeline is:
 
-``` text
-PDF
+```text
+parse_statement(path)
+    ↓
+StatementSource + SHA-256
     ↓
 PdfStatementTextReader
     ↓
@@ -1544,15 +1601,20 @@ focused economic normalization
     ↓
 ParsedStatement
     ↓
-optional reconciliation
+account-type-aware reconciliation
+    ↓
+StatementParseResult
 ```
+
+`parse_statements(source)` applies this same canonical pipeline to one PDF or
+every recursively discovered PDF beneath a directory.
 
 The architecture separates document mechanics from normalized financial
 meaning.
 
 The domain layer should not depend on:
 
-``` text
+```text
 PDF layouts
 regular expressions
 specific banks
@@ -1565,13 +1627,53 @@ application frameworks
 Institution-specific extraction behavior belongs in processors. Generic
 financial meaning belongs in the domain.
 
+## Public API
+
+The supported high-level application interface is:
+
+```python
+from banking_statements import (
+    StatementParseResult,
+    parse_statement,
+    parse_statements,
+)
+```
+
+Conceptually:
+
+```python
+def parse_statement(
+    path: str | Path,
+) -> StatementParseResult:
+    ...
+```
+
+and:
+
+```python
+def parse_statements(
+    source: str | Path,
+) -> tuple[StatementParseResult, ...]:
+    ...
+```
+
+The high-level API owns default PDF reading, institution detection, processor
+registry composition, processor selection, parsing, and reconciliation.
+
+Lower-level components remain public where useful, but downstream applications
+should not duplicate the default orchestration recipe.
+
+The private archive smoke runner intentionally consumes `parse_statement()`.
+This ensures the same public API used by downstream applications is continuously
+exercised against the complete supported private corpus.
+
 ## Processor Model
 
 Processors represent known statement grammars.
 
 Conceptually:
 
-``` python
+```python
 class StatementProcessor(Protocol):
     @property
     def name(self) -> str: ...
@@ -1609,7 +1711,7 @@ without claiming unrelated documents from the same company.
 
 Institution detection and processor selection are separate steps:
 
-``` text
+```text
 statement text
     ↓
 institution signature
@@ -1628,7 +1730,7 @@ them, not because a broader marker seems theoretically convenient.
 
 `ProcessorRegistry` requires exactly one compatible processor.
 
-``` text
+```text
 0 matches
     → UnsupportedStatementError
 
@@ -1652,7 +1754,7 @@ The central maintenance rule is:
 
 When a future statement fails, the failure should first be classified.
 
-``` text
+```text
 New institution?
     → add institution detection and processor support
 
@@ -1682,7 +1784,7 @@ understood.
 
 The package should not silently discard or guess around:
 
-``` text
+```text
 unknown transaction rows
 unknown required sections
 ambiguous processor matches
@@ -1707,7 +1809,7 @@ transaction.
 
 Real statements may contain:
 
-``` text
+```text
 wrapped descriptions
 continuation lines
 multi-line ACH details
@@ -1720,7 +1822,7 @@ adjacent-column bleed
 When required, processors reconstruct logical rows before attempting to
 normalize economic meaning.
 
-``` text
+```text
 physical extracted lines
     ↓
 logical statement rows
@@ -1735,7 +1837,7 @@ interpretation.
 
 Current implemented support:
 
-``` text
+```text
 Chase
     credit card
     business credit card
@@ -1789,7 +1891,7 @@ the repository.
 
 The expected local structure is:
 
-``` text
+```text
 private-data/
 └── statements/
     ├── chase/
@@ -1821,14 +1923,14 @@ balances, or other private values from the development archive.
 Development includes tooling for inspecting the exact text extracted
 from a PDF statement.
 
-``` bash
+```bash
 make inspect-statement \
     file="private-data/statements/example/statement.pdf"
 ```
 
 Inspect a specific page:
 
-``` bash
+```bash
 make inspect-statement \
     file="private-data/statements/example/statement.pdf" \
     page=2
@@ -1836,7 +1938,7 @@ make inspect-statement \
 
 Optionally limit displayed text:
 
-``` bash
+```bash
 make inspect-statement \
     file="private-data/statements/example/statement.pdf" \
     head=3000
@@ -1851,9 +1953,16 @@ on how a PDF looks visually.
 Institution processors are validated against private historical
 statement archives.
 
+The smoke runner calls the same public `parse_statement()` API intended for
+downstream applications. It does not maintain a separate PDF-reading,
+institution-detection, registry-selection, or parsing pipeline.
+
+This makes full-archive smoke validation an integration test of the public API
+itself.
+
 The development workflow is intentionally chronological:
 
-``` text
+```text
 01 PASS
 02 PASS
 03 PASS
@@ -1871,14 +1980,14 @@ resumes.
 
 Typical usage:
 
-``` bash
+```bash
 make smoke-archive \
     folder="private-data/statements/example"
 ```
 
 Resume from a particular archive position:
 
-``` bash
+```bash
 make smoke-archive \
     folder="private-data/statements/example" \
     from=4
@@ -1886,7 +1995,7 @@ make smoke-archive \
 
 Limit the run:
 
-``` bash
+```bash
 make smoke-archive \
     folder="private-data/statements/example" \
     limit=10
@@ -1894,7 +2003,7 @@ make smoke-archive \
 
 Continue after failures when mapping an archive:
 
-``` bash
+```bash
 make smoke-archive \
     folder="private-data/statements/example" \
     continue=1
@@ -1902,7 +2011,8 @@ make smoke-archive \
 
 A strict smoke PASS means:
 
-``` text
+```text
+parse_statement() completed successfully
 document extraction succeeded
 institution detection succeeded
 processor selection succeeded
@@ -1917,7 +2027,7 @@ statement reconciliation succeeded
 
 Run a single statement and print normalized transactions:
 
-``` bash
+```bash
 uv run python -m scripts.archive_smoke \
     private-data/statements/example/statement.pdf \
     --show-transactions
@@ -1926,7 +2036,7 @@ uv run python -m scripts.archive_smoke \
 Allow reconciliation mismatches for investigation without turning them
 into smoke failures:
 
-``` bash
+```bash
 uv run python -m scripts.archive_smoke \
     private-data/statements/example \
     --allow-reconciliation-failures
@@ -1934,7 +2044,7 @@ uv run python -m scripts.archive_smoke \
 
 Include a traceback while investigating:
 
-``` bash
+```bash
 uv run python -m scripts.archive_smoke \
     private-data/statements/example/statement.pdf \
     --show-transactions \
@@ -1952,7 +2062,7 @@ assumptions.
 
 The typical loop is:
 
-``` text
+```text
 1. Run the private archive.
 2. Stop at the first failure.
 3. Inspect the exact extracted statement text.
@@ -1991,55 +2101,55 @@ understand why each supported statement reconciles.
 
 Install development dependencies:
 
-``` bash
+```bash
 uv sync --dev
 ```
 
 Format:
 
-``` bash
+```bash
 make format
 ```
 
 Check formatting:
 
-``` bash
+```bash
 make format-check
 ```
 
 Lint:
 
-``` bash
+```bash
 make lint
 ```
 
 Type check:
 
-``` bash
+```bash
 make typecheck
 ```
 
 Run tests:
 
-``` bash
+```bash
 make test
 ```
 
 Run tests in parallel:
 
-``` bash
+```bash
 make test-fast
 ```
 
 Run branch coverage:
 
-``` bash
+```bash
 make coverage
 ```
 
 The project maintains:
 
-``` text
+```text
 100% branch coverage
 ```
 
@@ -2047,25 +2157,25 @@ The project maintains:
 
 Run the normal validation suite:
 
-``` bash
+```bash
 make check
 ```
 
 Run the CI-equivalent validation pipeline:
 
-``` bash
+```bash
 make ci
 ```
 
 Before preparing a release:
 
-``` bash
+```bash
 make release-check
 ```
 
 The release check validates:
 
-``` text
+```text
 formatting
 linting
 mypy
@@ -2083,31 +2193,31 @@ private archive before publication.
 
 Build the source distribution and wheel:
 
-``` bash
+```bash
 make build
 ```
 
 Validate distributions:
 
-``` bash
+```bash
 make check-dist
 ```
 
 Inspect wheel contents:
 
-``` bash
+```bash
 make wheel-contents
 ```
 
 Install the built wheel into a clean environment:
 
-``` bash
+```bash
 make install-wheel
 ```
 
 The distributed wheel includes:
 
-``` text
+```text
 banking_statements/py.typed
 ```
 
@@ -2119,19 +2229,19 @@ The project uses `uv`.
 
 Synchronize the development environment:
 
-``` bash
+```bash
 make sync
 ```
 
 Refresh the lockfile:
 
-``` bash
+```bash
 make lock
 ```
 
 Upgrade dependencies:
 
-``` bash
+```bash
 make upgrade
 ```
 
@@ -2141,7 +2251,7 @@ reproducible locked environments.
 After changing package metadata or dependencies, refresh the lockfile
 before committing when required:
 
-``` bash
+```bash
 uv lock
 ```
 
@@ -2149,7 +2259,7 @@ uv lock
 
 Supported Python versions:
 
-``` text
+```text
 Python 3.11
 Python 3.12
 Python 3.13
@@ -2164,13 +2274,13 @@ CI validates the full supported version matrix.
 
 The project uses strict mypy checking during development:
 
-``` bash
+```bash
 make typecheck
 ```
 
 The wheel includes the PEP 561 marker:
 
-``` text
+```text
 banking_statements/py.typed
 ```
 
@@ -2180,11 +2290,14 @@ The package is intentionally narrow.
 
 It aims to provide:
 
-``` text
+```text
+institution-independent application integration
+high-level parse_statement() and parse_statements() APIs
 bank statement parsing
+automatic institution detection
+deterministic account-family processor selection
 statement normalization
 source and layout evidence
-processor selection
 strict statement validation
 account-type-aware reconciliation
 typed Python domain objects
@@ -2192,7 +2305,7 @@ typed Python domain objects
 
 It does not aim to provide:
 
-``` text
+```text
 online banking access
 bank API integrations
 budgeting
@@ -2216,8 +2329,9 @@ itself.
 
 Current milestone:
 
-``` text
-0.10.0
+```text
+0.11.0
+    high-level public parsing API
     seven-institution statement support
 
     Chase
@@ -2256,6 +2370,10 @@ Current milestone:
         business checking
         credit card
 
+    public parse_statement() API
+    public parse_statements() API
+    StatementParseResult with reconciliation and page count
+    smoke runner using the same public parsing API
     account-type-aware reconciliation
     layout-aware PDF evidence
     strict institution detection
@@ -2267,13 +2385,13 @@ Current milestone:
 
 Next evidence-driven institution target:
 
-``` text
+```text
 To be selected from the next private statement corpus.
 ```
 
 Expected later phases:
 
-``` text
+```text
 additional account families for supported institutions
 additional institutions
 additional historical statement grammars
