@@ -83,17 +83,10 @@ from __future__ import annotations
 
 import argparse
 import traceback
-from hashlib import sha256
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from banking_statements.domain import StatementSource
-from banking_statements.processors import (
-    build_default_institution_detector,
-    build_default_processor_registry,
-)
-from banking_statements.reconciliation import reconcile_statement
-from banking_statements.text import PdfStatementTextReader
+from banking_statements import parse_statement
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -174,17 +167,6 @@ def discover_statements(
     )
 
 
-def file_sha256(path: Path) -> str:
-    """Return the SHA-256 digest for a statement file."""
-    digest = sha256()
-
-    with path.open("rb") as source_file:
-        while chunk := source_file.read(1024 * 1024):
-            digest.update(chunk)
-
-    return digest.hexdigest()
-
-
 def select_statements(
     statements: Sequence[Path],
     *,
@@ -216,10 +198,6 @@ def run_archive_smoke(  # noqa: PLR0913
     allow_reconciliation_failures: bool,
 ) -> int:
     """Parse statements and return the number of smoke failures."""
-    reader = PdfStatementTextReader()
-    detector = build_default_institution_detector()
-    registry = build_default_processor_registry()
-
     failures = 0
     total = len(statements)
 
@@ -233,20 +211,9 @@ def run_archive_smoke(  # noqa: PLR0913
         label = f"[{index:02d}/{total:02d}]"
 
         try:
-            source = StatementSource(
-                path=path,
-                sha256=file_sha256(path),
-            )
-            text = reader.read(source)
-
-            detector.detect(text)
-
-            processor = registry.select(text)
-            statement = processor.parse(
-                source,
-                text,
-            )
-            reconciliation = reconcile_statement(statement)
+            result = parse_statement(path)
+            statement = result.statement
+            reconciliation = result.reconciliation
         except Exception as exc:  # noqa: BLE001
             failures += 1
 
@@ -271,7 +238,7 @@ def run_archive_smoke(  # noqa: PLR0913
                 path,
                 statement=statement,
                 reconciliation=reconciliation,
-                page_count=len(text.pages),
+                page_count=result.page_count,
                 show_transactions=show_transactions,
             )
 
@@ -285,7 +252,7 @@ def run_archive_smoke(  # noqa: PLR0913
             path,
             statement=statement,
             reconciliation=reconciliation,
-            page_count=len(text.pages),
+            page_count=result.page_count,
             show_transactions=show_transactions,
             reconciliation_is_warning=allow_reconciliation_failures,
         )
