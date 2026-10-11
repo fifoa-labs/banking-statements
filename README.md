@@ -27,7 +27,9 @@ data, unknown statement behavior, and reconciliation failures during
 archive validation are surfaced explicitly rather than silently ignored
 or guessed around.
 
-Version `0.11.0` adds a first-class high-level parsing API while retaining
+Version `0.12.0` adds Chime and Wells Fargo Way2Save savings support,
+including independently reconciled accounts from combined documents.
+Version `0.11.0` added a first-class high-level parsing API while retaining
 the seven supported institutions introduced through `0.10.0`:
 
 ```text
