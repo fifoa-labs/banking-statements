@@ -142,3 +142,15 @@ def test_combined_returns_independent_savings() -> None:
     assert secondary.account.last4 == "3333"
     assert secondary.account.account_type is AccountType.SAVINGS
     assert len(secondary.transactions) == 2
+
+
+def test_savings_summary_row_is_not_a_section() -> None:
+    summary = "Wells Fargo Way2Save® Savings 3 111122223333 100.00 120.00\n"
+    detail = savings_text().text
+    text = make_statement_text(summary + detail)
+    assert extract_savings_section(text) == detail
+    assert (
+        not WellsFargoSavingsProcessor()
+        .match(make_statement_text(summary))
+        .matched
+    )

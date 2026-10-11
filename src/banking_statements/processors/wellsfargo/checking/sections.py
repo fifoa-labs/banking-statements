@@ -19,7 +19,7 @@ _CHECKING_START_PATTERN = re.compile(
 )
 
 _SAVINGS_START_PATTERN = re.compile(
-    r"^Wells Far\s*go .*Savings.*$",
+    r"^Wells Far\s*go .*Savings®?\s*$",
     re.MULTILINE,
 )
 
