@@ -10,9 +10,9 @@ import re
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from banking_statements.domain import StatementBalanceSummary
+from banking_statements.domain import AccountType, StatementBalanceSummary
 
-from .sections import extract_checking_section
+from .sections import extract_checking_section, extract_savings_section
 
 if TYPE_CHECKING:
     from banking_statements.text import StatementText
@@ -34,9 +34,17 @@ def _parse_amount(value: str) -> Decimal:
     return Decimal(value.replace(",", ""))
 
 
-def parse_balance_summary(text: StatementText) -> StatementBalanceSummary:
+def parse_balance_summary(
+    text: StatementText,
+    *,
+    account_type: AccountType = AccountType.CHECKING,
+) -> StatementBalanceSummary:
     """Parse reported Wells Fargo checking opening and closing balances."""
-    section = extract_checking_section(text)
+    section = (
+        extract_savings_section(text)
+        if account_type is AccountType.SAVINGS
+        else extract_checking_section(text)
+    )
 
     beginning_match = _BEGINNING_BALANCE_PATTERN.search(section)
     if beginning_match is None:

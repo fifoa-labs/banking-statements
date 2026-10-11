@@ -27,7 +27,9 @@ data, unknown statement behavior, and reconciliation failures during
 archive validation are surfaced explicitly rather than silently ignored
 or guessed around.
 
-Version `0.11.0` adds a first-class high-level parsing API while retaining
+Version `0.12.0` adds Chime and Wells Fargo Way2Save savings support,
+including independently reconciled accounts from combined documents.
+Version `0.11.0` added a first-class high-level parsing API while retaining
 the seven supported institutions introduced through `0.10.0`:
 
 ```text
@@ -57,6 +59,56 @@ database layer, or Beancount-specific importer.
 -   **PyPI:** https://pypi.org/project/banking-statements/
 -   **Source:** https://github.com/fifoa-labs/banking-statements
 -   **License:** MIT
+
+## Chime support (feature branch; unreleased)
+
+The Chime processors currently support the statement grammars evidenced by
+checking and Credit Builder samples from 2025 and 2026:
+
+- Checking deposits and signed transfers, including wrapped descriptions,
+  transaction and settlement-date source evidence, and amount/net-amount checks.
+- Combined Credit Builder PDFs containing an inactive card account and a
+  separate secured deposit account with signed transfers.
+- Independent account identities, statement periods, balances, transactions,
+  and reconciliation for both accounts in a combined PDF.
+
+The secured account uses `AccountType.CHECKING` because its balance follows
+asset/deposit economics. It is identified by its own account number and the
+`chime.secured_account.v1` processor; it is never merged with the card account.
+Card purchases, payments, fees, and disputed activity are not yet evidenced.
+Active card sections and unsupported deposit transaction types fail explicitly
+until real statement evidence establishes their grammar.
+
+### Documents containing multiple accounts
+
+`parse_statement()` retains the primary account in `result.statement` and
+`result.reconciliation`. Iterate `result.accounts` to consume **every** account,
+including the Credit Builder secured account:
+
+```python
+from banking_statements import parse_statement
+
+result = parse_statement("statement.pdf")
+for account_result in result.accounts:
+    statement = account_result.statement
+    print(statement.account.last4, account_result.reconciliation.reconciled)
+```
+
+`result.additional_accounts` contains the secondary results. At the lower-level
+processor boundary, `ParsedStatement.additional_statements` preserves secondary
+normalized statements. Both fields default to empty tuples for existing
+single-account processors.
+
+`parse_statements()` returns one result **per account**, in document path order
+and then account source order. A combined Chime Credit Builder PDF therefore
+produces two results. Callers must not assume one PDF equals one account.
+The archive smoke runner validates and prints all account results; a mismatch
+in the secured account fails strict smoke validation even if the card matches.
+
+Validation on this branch covers four supplied PDFs (six account statements).
+The complete 48-PDF Chime archive and the existing private archive must still be
+validated locally before release. No private PDFs or extracted private text
+are included in the repository.
 
 ## Current Status
 
@@ -953,6 +1005,7 @@ Wells Fargo support covers:
 
 ```text
 checking
+Way2Save savings (including combined checking/savings PDFs)
 credit card
 business checking
 business credit card
@@ -965,6 +1018,13 @@ the same domain used by every other institution.
 Wells Fargo support includes account identity, statement periods,
 opening and closing balances, transaction reconstruction, debit/credit
 normalization, source evidence, and account-type-aware reconciliation.
+
+Combined checking and Way2Save PDFs return checking as the primary result
+and savings in `result.additional_accounts`; `result.accounts` includes both.
+Each account has its own identity, activity, balances, and reconciliation.
+`parse_statements` flattens these into separate account results. Consumers
+must ingest all accounts and deduplicate identical documents downloaded
+from either account menu. Other savings families fail explicitly.
 
 The Wells Fargo business line-of-credit processor uses layout-aware PDF
 evidence where column position carries transaction direction. This is an

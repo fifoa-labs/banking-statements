@@ -64,3 +64,5 @@ class ParsedStatement:
     period: StatementPeriod
     balances: StatementBalanceSummary
     transactions: tuple[TransactionEvent, ...] = ()
+    # Other independently owned accounts reported in the same source PDF.
+    additional_statements: tuple[ParsedStatement, ...] = ()

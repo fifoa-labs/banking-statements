@@ -26,6 +26,11 @@ from banking_statements.processors.chase import (
     ChaseCreditCardProcessor,
     ChaseHelocProcessor,
 )
+from banking_statements.processors.chime import (
+    CHIME_SIGNATURES,
+    ChimeCheckingProcessor,
+    ChimeCreditBuilderProcessor,
+)
 from banking_statements.processors.detection import InstitutionDetector
 from banking_statements.processors.discover import (
     DISCOVER_SIGNATURES,
@@ -50,6 +55,9 @@ from banking_statements.processors.wellsfargo import (
     WellsFargoCheckingProcessor,
     WellsFargoCreditCardProcessor,
 )
+from banking_statements.processors.wellsfargo.savings import (
+    WellsFargoSavingsProcessor,
+)
 
 
 def build_default_institution_detector() -> InstitutionDetector:
@@ -63,6 +71,7 @@ def build_default_institution_detector() -> InstitutionDetector:
             *CAPITAL_ONE_SIGNATURES,
             *PENFED_SIGNATURES,
             *US_BANK_SIGNATURES,
+            *CHIME_SIGNATURES,
         )
     )
 
@@ -92,5 +101,8 @@ def build_default_processor_registry() -> ProcessorRegistry:
             PenFedHelocProcessor(),
             USBankBusinessCheckingProcessor(),
             USBankCreditCardProcessor(),
+            ChimeCheckingProcessor(),
+            ChimeCreditBuilderProcessor(),
+            WellsFargoSavingsProcessor(),
         )
     )

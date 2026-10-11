@@ -19,7 +19,7 @@ _CHECKING_START_PATTERN = re.compile(
 )
 
 _SAVINGS_START_PATTERN = re.compile(
-    r"^Wells Far\s*go .*Savings.*$",
+    r"^Wells Far\s*go .*Savings®?\s*$",
     re.MULTILINE,
 )
 
@@ -43,3 +43,26 @@ def extract_checking_section(text: StatementText) -> str:
     )
 
     return full_text[checking_match.start() : end]
+
+
+def extract_savings_section(text: StatementText) -> str:
+    """Return the actual savings section, excluding the account summary."""
+    matches = tuple(_SAVINGS_START_PATTERN.finditer(text.text))
+    if len(matches) > 1:
+        msg = "Multiple Wells Fargo savings sections require explicit support."
+        raise ValueError(msg)
+    match = matches[0] if matches else None
+    if match is None:
+        msg = "Wells Fargo savings section was not found."
+        raise ValueError(msg)
+    return text.text[match.start() :]
+
+
+def has_savings_section(text: StatementText) -> bool:
+    """Detect a detailed savings heading, not an uppercase summary row."""
+    return _SAVINGS_START_PATTERN.search(text.text) is not None
+
+
+def has_checking_section(text: StatementText) -> bool:
+    """Detect a detailed checking heading independently of descriptions."""
+    return _CHECKING_START_PATTERN.search(text.text) is not None

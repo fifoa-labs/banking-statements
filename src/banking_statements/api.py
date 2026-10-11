@@ -31,6 +31,12 @@ class StatementParseResult:
     statement: ParsedStatement
     reconciliation: StatementReconciliation
     page_count: int
+    additional_accounts: tuple[StatementParseResult, ...] = ()
+
+    @property
+    def accounts(self) -> tuple[StatementParseResult, ...]:
+        """Return every account result from this document in source order."""
+        return (self, *self.additional_accounts)
 
 
 def parse_statement(
@@ -61,16 +67,25 @@ def parse_statement(
         statement=statement,
         reconciliation=reconciliation,
         page_count=len(text.pages),
+        additional_accounts=tuple(
+            StatementParseResult(
+                statement=additional,
+                reconciliation=reconcile_statement(additional),
+                page_count=len(text.pages),
+            )
+            for additional in statement.additional_statements
+        ),
     )
 
 
 def parse_statements(
     source: str | Path,
 ) -> tuple[StatementParseResult, ...]:
-    """Parse supported statement PDFs from one file or directory tree."""
+    """Parse PDFs in path order, returning one result per reported account."""
     return tuple(
-        parse_statement(path)
+        account
         for path in _discover_statement_paths(Path(source))
+        for account in parse_statement(path).accounts
     )
 
 

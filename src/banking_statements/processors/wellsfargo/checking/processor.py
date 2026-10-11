@@ -14,12 +14,16 @@ from banking_statements.domain import (
     StatementSource,
 )
 from banking_statements.processors.base import ProcessorMatch
+from banking_statements.processors.wellsfargo.savings import (
+    WellsFargoSavingsProcessor,
+)
 from banking_statements.processors.wellsfargo.signatures import (
     WELLS_FARGO_CHECKING_SIGNATURES,
 )
 
 from .activity import parse_activity_rows, parse_activity_transactions
 from .identity import parse_identity
+from .sections import has_savings_section
 from .summary import parse_balance_summary
 
 if TYPE_CHECKING:
@@ -79,4 +83,9 @@ class WellsFargoCheckingProcessor:
             period=period,
             balances=balances,
             transactions=transactions,
+            additional_statements=(
+                (WellsFargoSavingsProcessor().parse(source, text),)
+                if has_savings_section(text)
+                else ()
+            ),
         )
