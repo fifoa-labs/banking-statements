@@ -230,32 +230,39 @@ def run_archive_smoke(  # noqa: PLR0913
 
             continue
 
-        if not reconciliation.reconciled and not allow_reconciliation_failures:
-            failures += 1
+        document_failed = False
+        for account_result in result.accounts:
+            statement = account_result.statement
+            reconciliation = account_result.reconciliation
+            if (
+                not reconciliation.reconciled
+                and not allow_reconciliation_failures
+            ):
+                failures += 1
+                document_failed = True
 
-            _print_failure(
+                _print_failure(
+                    label,
+                    path,
+                    statement=statement,
+                    reconciliation=reconciliation,
+                    page_count=result.page_count,
+                    show_transactions=show_transactions,
+                )
+
+                continue
+
+            _print_success(
                 label,
                 path,
                 statement=statement,
                 reconciliation=reconciliation,
                 page_count=result.page_count,
                 show_transactions=show_transactions,
+                reconciliation_is_warning=allow_reconciliation_failures,
             )
-
-            if not continue_on_error:
-                break
-
-            continue
-
-        _print_success(
-            label,
-            path,
-            statement=statement,
-            reconciliation=reconciliation,
-            page_count=result.page_count,
-            show_transactions=show_transactions,
-            reconciliation_is_warning=allow_reconciliation_failures,
-        )
+        if document_failed and not continue_on_error:
+            break
 
     return failures
 

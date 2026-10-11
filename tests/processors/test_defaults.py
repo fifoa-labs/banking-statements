@@ -30,6 +30,11 @@ from banking_statements.processors.chase import (
     ChaseCreditCardProcessor,
     ChaseHelocProcessor,
 )
+from banking_statements.processors.chime import (
+    CHIME_SIGNATURES,
+    ChimeCheckingProcessor,
+    ChimeCreditBuilderProcessor,
+)
 from banking_statements.processors.discover import (
     DISCOVER_SIGNATURES,
     DiscoverCheckingProcessor,
@@ -65,13 +70,14 @@ def test_build_default_institution_detector() -> None:
         *CAPITAL_ONE_SIGNATURES,
         *PENFED_SIGNATURES,
         *US_BANK_SIGNATURES,
+        *CHIME_SIGNATURES,
     )
 
 
 def test_build_default_processor_registry() -> None:
     registry = build_default_processor_registry()
 
-    assert len(registry.processors) == 21
+    assert len(registry.processors) == 23
     assert isinstance(registry.processors[0], ChaseCreditCardProcessor)
     assert isinstance(
         registry.processors[1],
@@ -123,3 +129,6 @@ def test_build_default_processor_registry() -> None:
         USBankBusinessCheckingProcessor,
     )
     assert isinstance(registry.processors[20], USBankCreditCardProcessor)
+
+    assert isinstance(registry.processors[21], ChimeCheckingProcessor)
+    assert isinstance(registry.processors[22], ChimeCreditBuilderProcessor)
