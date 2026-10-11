@@ -1003,6 +1003,7 @@ Wells Fargo support covers:
 
 ```text
 checking
+Way2Save savings (including combined checking/savings PDFs)
 credit card
 business checking
 business credit card
@@ -1015,6 +1016,13 @@ the same domain used by every other institution.
 Wells Fargo support includes account identity, statement periods,
 opening and closing balances, transaction reconstruction, debit/credit
 normalization, source evidence, and account-type-aware reconciliation.
+
+Combined checking and Way2Save PDFs return checking as the primary result
+and savings in `result.additional_accounts`; `result.accounts` includes both.
+Each account has its own identity, activity, balances, and reconciliation.
+`parse_statements` flattens these into separate account results. Consumers
+must ingest all accounts and deduplicate identical documents downloaded
+from either account menu. Other savings families fail explicitly.
 
 The Wells Fargo business line-of-credit processor uses layout-aware PDF
 evidence where column position carries transaction direction. This is an

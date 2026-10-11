@@ -12,6 +12,8 @@ from dataclasses import dataclass, replace
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
+from banking_statements.domain import AccountType
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
@@ -111,6 +113,8 @@ def _line_text(words: Sequence[StatementWord]) -> str:
 
 def _find_activity_columns(
     lines: Sequence[Sequence[StatementWord]],
+    *,
+    savings: bool = False,
 ) -> tuple[int, _ActivityColumns] | None:
     """Locate an activity-table header and its monetary columns."""
     for index, line in enumerate(lines):
@@ -119,7 +123,16 @@ def _find_activity_columns(
             None,
         )
         subtractions = next(
-            (word for word in line if word.text.casefold() == "subtractions"),
+            (
+                word
+                for word in line
+                if word.text.casefold()
+                in (
+                    ("subtractions", "ctions")
+                    if savings
+                    else ("subtractions",)
+                )
+            ),
             None,
         )
         balance = next(
@@ -229,6 +242,7 @@ def _parse_page_activity(  # noqa: C901
     page: StatementPage,
     *,
     checking_active: bool,
+    account_type: AccountType = AccountType.CHECKING,
 ) -> tuple[
     tuple[WellsFargoCheckingActivityRow, ...],
     bool,
@@ -247,13 +261,13 @@ def _parse_page_activity(  # noqa: C901
         line_text = _line_text(line)
 
         if _CHECKING_HEADING_PATTERN.search(line_text):
-            checking_active = True
+            checking_active = account_type is AccountType.CHECKING
             in_activity = False
             columns = None
             continue
 
         if _SAVINGS_HEADING_PATTERN.search(line_text):
-            checking_active = False
+            checking_active = account_type is AccountType.SAVINGS
             in_activity = False
             columns = None
             continue
@@ -275,7 +289,10 @@ def _parse_page_activity(  # noqa: C901
             continue
 
         if columns is None:
-            header = _find_activity_columns(lines[index : index + 1])
+            header = _find_activity_columns(
+                lines[index : index + 1],
+                savings=account_type is AccountType.SAVINGS,
+            )
 
             if header is not None:
                 _, columns = header
@@ -304,6 +321,8 @@ def _parse_page_activity(  # noqa: C901
 
 def parse_activity_rows(
     text: StatementText,
+    *,
+    account_type: AccountType = AccountType.CHECKING,
 ) -> tuple[WellsFargoCheckingActivityRow, ...]:
     """Parse layout-aware Wells Fargo checking transaction-history rows."""
     rows: list[WellsFargoCheckingActivityRow] = []
@@ -313,6 +332,7 @@ def parse_activity_rows(
         page_rows, checking_active = _parse_page_activity(
             page,
             checking_active=checking_active,
+            account_type=account_type,
         )
         rows.extend(page_rows)
 

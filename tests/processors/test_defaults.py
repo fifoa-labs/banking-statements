@@ -77,7 +77,7 @@ def test_build_default_institution_detector() -> None:
 def test_build_default_processor_registry() -> None:
     registry = build_default_processor_registry()
 
-    assert len(registry.processors) == 23
+    assert len(registry.processors) == 24
     assert isinstance(registry.processors[0], ChaseCreditCardProcessor)
     assert isinstance(
         registry.processors[1],
@@ -132,3 +132,5 @@ def test_build_default_processor_registry() -> None:
 
     assert isinstance(registry.processors[21], ChimeCheckingProcessor)
     assert isinstance(registry.processors[22], ChimeCreditBuilderProcessor)
+
+    assert registry.processors[23].name == "wellsfargo.savings.v1"

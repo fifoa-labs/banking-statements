@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 
 from banking_statements.domain import AccountIdentity, AccountType
 
-from .sections import extract_checking_section
+from .sections import extract_checking_section, extract_savings_section
 
 if TYPE_CHECKING:
     from banking_statements.text import StatementText
@@ -113,9 +113,17 @@ def _parse_statement_period(
     return statement_start, statement_end
 
 
-def parse_identity(text: StatementText) -> WellsFargoCheckingIdentity:
+def parse_identity(
+    text: StatementText,
+    *,
+    account_type: AccountType = AccountType.CHECKING,
+) -> WellsFargoCheckingIdentity:
     """Parse identity fields from a Wells Fargo checking statement."""
-    section = extract_checking_section(text)
+    section = (
+        extract_savings_section(text)
+        if account_type is AccountType.SAVINGS
+        else extract_checking_section(text)
+    )
 
     account_match = _ACCOUNT_PATTERN.search(section)
     if account_match is None:
@@ -131,7 +139,7 @@ def parse_identity(text: StatementText) -> WellsFargoCheckingIdentity:
 
     return WellsFargoCheckingIdentity(
         account=AccountIdentity(
-            account_type=AccountType.CHECKING,
+            account_type=account_type,
             display_number=display_number,
             last4=display_number[-4:],
         ),

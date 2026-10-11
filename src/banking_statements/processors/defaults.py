@@ -55,6 +55,9 @@ from banking_statements.processors.wellsfargo import (
     WellsFargoCheckingProcessor,
     WellsFargoCreditCardProcessor,
 )
+from banking_statements.processors.wellsfargo.savings import (
+    WellsFargoSavingsProcessor,
+)
 
 
 def build_default_institution_detector() -> InstitutionDetector:
@@ -100,5 +103,6 @@ def build_default_processor_registry() -> ProcessorRegistry:
             USBankCreditCardProcessor(),
             ChimeCheckingProcessor(),
             ChimeCreditBuilderProcessor(),
+            WellsFargoSavingsProcessor(),
         )
     )
