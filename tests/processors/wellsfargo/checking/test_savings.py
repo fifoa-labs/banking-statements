@@ -154,3 +154,20 @@ def test_savings_summary_row_is_not_a_section() -> None:
         .match(make_statement_text(summary))
         .matched
     )
+
+
+def test_savings_split_pdf_words() -> None:
+    original = savings_text()
+    text = (
+        original.text.replace(
+            "Wells Fargo Way2Save Savings", "Wells Far go Way2Save® Savings"
+        )
+        .replace("Deposits/Additions", "Deposits/A dditions")
+        .replace("Withdrawals/Subtractions", "Withdrawa ls/Subtractions")
+    )
+    evidence = make_statement_text(text, words=original.pages[0].words)
+    processor = WellsFargoSavingsProcessor()
+    assert processor.match(evidence).matched
+    result = processor.parse(make_source(), evidence)
+    assert len(result.transactions) == 2
+    assert result.account.last4 == "3333"

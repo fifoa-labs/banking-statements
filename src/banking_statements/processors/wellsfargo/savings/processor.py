@@ -54,7 +54,7 @@ class WellsFargoSavingsProcessor:
         text: StatementText,
     ) -> ParsedStatement:
         section = extract_savings_section(text)
-        if not section.startswith("Wells Fargo Way2Save"):
+        if re.match(r"Wells Far\s*go Way2Save®? Savings", section) is None:
             msg = "Unsupported Wells Fargo savings account family."
             raise ValueError(msg)
         identity = parse_identity(text, account_type=AccountType.SAVINGS)
@@ -66,8 +66,9 @@ class WellsFargoSavingsProcessor:
             ("Deposits/Additions", (row.addition for row in rows)),
             ("Withdrawals/Subtractions", (row.subtraction for row in rows)),
         ):
+            label_pattern = r"\s*".join(re.escape(char) for char in label)
             match = re.search(
-                rf"{re.escape(label)}\s+(?:-\s*)?([\d,]+\.\d{{2}})",
+                rf"{label_pattern}\s+(?:-\s*)?([\d,]+\.\d{{2}})",
                 section,
             )
             if match is None:
