@@ -33,9 +33,9 @@ _ROW_PATTERN = re.compile(
 )
 
 _SECTION_PATTERN = re.compile(
-    r"\*start\*transactiondetail\s*"
+    r"\*start\*transaction\s*detail\s*"
     r"(?P<body>.*?)"
-    r"\*end\*transactiondetail",
+    r"\*end\*transaction\s*detail",
     re.DOTALL,
 )
 

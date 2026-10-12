@@ -31,7 +31,7 @@ _ACCOUNT_PATTERN = re.compile(
 )
 
 _PERIOD_PATTERN = re.compile(
-    r"(?P<start>[A-Z][a-z]+ \d{1,2}, \d{4})\s+through\s+"
+    r"(?P<start>[A-Z][a-z]+ \d{1,2}, \d{4})\s*through\s*"
     r"(?P<end>[A-Z][a-z]+ \d{1,2}, \d{4})",
 )
 
