@@ -45,9 +45,12 @@ def test_empty_profiles_are_kept() -> None:
 def test_inspection_failure_is_retained(tmp_path: Path) -> None:
     path = tmp_path / "bad.pdf"
     path.write_bytes(b"invalid")
-    with patch(
-        "scripts.prune_archive.parse_statement",
-        side_effect=ValueError("unsupported"),
+    with (
+        patch("scripts.prune_archive.coverage.Coverage"),
+        patch(
+            "scripts.prune_archive.parse_statement",
+            side_effect=ValueError("unsupported"),
+        ),
     ):
         record = inspect_pdf(path, tmp_path)
     assert record.error == "ValueError: unsupported"
