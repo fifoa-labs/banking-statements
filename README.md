@@ -2491,3 +2491,64 @@ security reports.
 `banking-statements` is released under the MIT License.
 
 See [LICENSE](LICENSE) for details.
+
+## Reducing the private regression archive
+
+Preview a smaller representative corpus without moving any PDFs:
+
+```bash
+make prune-archive folder="private-data/statements"
+```
+
+This development command requires `uv sync --dev`. Every PDF passes through
+`parse_statement()` and every reported account must reconcile. Failed PDFs
+are retained. The command records observed package branch arcs, recognized
+institution signatures, account shape combinations (including empty activity,
+credit/debit directions, negative/zero balances and period boundaries), and
+selected historical input-format variants. A deterministic greedy selection
+preserves their combined feature coverage. It is not a minimum-set guarantee.
+
+The local report defaults to `private-data/prune-manifest.json`. It lists
+retained files, removal candidates, hashes, failures, and the retained files
+covering each candidate. The report contains private paths and may contain
+private parser error text; keep it outside public commits.
+
+**Equal observed coverage is not semantic equivalence.** Coverage cannot prove
+that all input grammars or future regressions are represented. Uninstrumented
+input differences can be lost. Review the manifest and retain independently
+valuable examples before reducing your corpus. The full source archive in the
+consuming application remains valuable for broader release validation.
+
+Pin an independently valuable example during preview with repeatable `--keep`
+paths relative to the archive root:
+
+```bash
+uv run python -m scripts.prune_archive private-data/statements \
+  --keep "chase/checking/example.pdf"
+```
+
+After reviewing the preview, explicitly acknowledge this limitation and move
+candidates to a new directory outside the active archive:
+
+```bash
+make prune-archive apply=1 accept=1 \
+  destination="private-data/pruned-statements"
+```
+
+Apply rejects stale parser code, changed file bytes, changed archive inventory,
+modified selections, symlinks, existing destinations, and destinations inside
+the active archive. It revalidates the retained PDFs and their coverage before
+moving candidates, preserving relative paths and a copy of the manifest. A move
+failure rolls back completed moves. Files are never permanently deleted by this
+command. Use a fresh preview after any changes.
+
+Validate the reduced archive afterward:
+
+```bash
+make smoke-archive folder="private-data/statements"
+```
+
+To restore, move the PDFs from the destination back to their original relative
+paths beneath the manifest's `root`. Keep the manifest until restoration is
+complete. Re-preview after adding new evidence or changing parsers; do not reuse
+an old manifest.
