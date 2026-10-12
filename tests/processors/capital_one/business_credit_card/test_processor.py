@@ -18,8 +18,10 @@ from banking_statements.domain import (
     TransactionDirection,
 )
 from banking_statements.processors.capital_one import (
+    CAPITAL_ONE_SIGNATURES,
     CapitalOneBusinessCreditCardProcessor,
 )
+from banking_statements.processors.detection import InstitutionDetector
 from banking_statements.reconciliation import reconcile_statement
 from banking_statements.text import StatementPage, StatementText
 
@@ -100,11 +102,15 @@ def test_processor_rejects_consumer_venture_x_statement() -> None:
     )
 
 
-def test_processor_parses_and_reconciles_current_spark() -> None:
+@pytest.mark.parametrize("card_label", ["credit card", "card"])
+def test_processor_parses_and_reconciles_current_spark(
+    card_label: str,
+) -> None:
     statement = CapitalOneBusinessCreditCardProcessor().parse(
         make_source(),
         make_text(
-            "Spark Cash credit card | Visa Signature Business ending in 1234\n"
+            f"Spark Cash {card_label} | "
+            "Visa Signature Business ending in 1234\n"
             "Mar 1, 2026 - Mar 31, 2026 | 31 days in Billing Cycle\n"
             "Payment Information Account Summary\n"
             "Previous Balance $100.00\n"
@@ -205,3 +211,21 @@ def test_processor_parses_and_reconciles_venture_x_business() -> None:
     reconciliation = reconcile_statement(statement)
     assert reconciliation.reconciled is True
     assert reconciliation.difference == Decimal("0.00")
+
+
+@pytest.mark.parametrize("card_label", ["credit card", "card"])
+def test_spark_header_detects_institution_and_matches(card_label: str) -> None:
+    text = make_text(
+        f"Spark Cash {card_label} | "
+        "Visa Signature Business ending in 1234\n"
+        "31 days in Billing Cycle\n"
+        "Account Summary\n"
+        "Trans Date Post Date Description Amount\n"
+        "Fees\n"
+        "Capital One\n"
+    )
+    assert (
+        InstitutionDetector(CAPITAL_ONE_SIGNATURES).detect(text)
+        == "capital_one"
+    )
+    assert CapitalOneBusinessCreditCardProcessor().match(text).matched is True

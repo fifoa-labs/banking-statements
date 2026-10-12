@@ -317,3 +317,12 @@ help: ## Show this help
 		sort | \
 		awk 'BEGIN {FS = ":.*?##"} \
 		{printf "  %-22s %s\n", $$1, $$2}'
+
+.PHONY: prune-archive
+prune-archive: ## Preview regression corpus reduction [folder=...] [report=...] [apply=1 destination=... accept=1]
+	@uv run python -m scripts.prune_archive \
+		"$(or $(folder),private-data/statements)" \
+		--report "$(or $(report),private-data/prune-manifest.json)" \
+		$(if $(filter 1,$(apply)),--apply,) \
+		$(if $(destination),--destination "$(destination)",) \
+		$(if $(filter 1,$(accept)),--accept-observed-coverage,)

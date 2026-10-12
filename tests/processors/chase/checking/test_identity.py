@@ -29,12 +29,15 @@ def make_statement_text(text: str) -> StatementText:
     )
 
 
-def test_parse_identity() -> None:
+@pytest.mark.parametrize(
+    "separator", [" through ", "through", " through", "through "]
+)
+def test_parse_identity(separator: str) -> None:
     identity = parse_identity(
         make_statement_text(
-            "\n".join(  # noqa: FLY002
+            "\n".join(
                 (
-                    "January 1, 2026 through January 31, 2026",
+                    f"January 1, 2026{separator}January 31, 2026",
                     "JPMorgan Chase Bank, N.A.",
                     "Account Number: 000000000001234",
                 )

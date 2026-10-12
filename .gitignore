@@ -219,3 +219,6 @@ __marimo__/
 
 # Bank statement development corpus
 private-data/
+
+# macOS Finder metadata
+.DS_Store

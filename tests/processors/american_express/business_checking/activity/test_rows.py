@@ -293,15 +293,16 @@ def test_parse_activity_rows_legacy_layout() -> None:
     )
 
 
-def test_parse_activity_rows_parenthesized_debit() -> None:
+@pytest.mark.parametrize("amount", ["($200.00)", "-$200.00"])
+def test_parse_activity_rows_parenthesized_debit(amount: str) -> None:
     rows = parse_activity_rows(
         make_statement_text(
-            "\n".join(  # noqa: FLY002
+            "\n".join(
                 (
                     "Account Activity",
                     "Date Description Credits Debits Balance",
                     "02/01/2025 Beginning Balance $1,000.00",
-                    ("02/21/2025 SAMPLE PAYMENT ($200.00) $800.00"),
+                    f"02/21/2025 SAMPLE PAYMENT {amount} $800.00",
                     "02/28/2025 Ending Balance $800.00",
                     "24/7 Account Access | World-Class Service",
                 )
@@ -317,9 +318,12 @@ def test_parse_activity_rows_parenthesized_debit() -> None:
     )
 
 
-def test_parse_activity_rows_rejects_unreconciled_parenthesized_debit() -> (
-    None
-):
+@pytest.mark.parametrize("amount", ["($200.00)", "-$200.00"])
+@pytest.mark.parametrize("balance", ["900.00", "1200.00"])
+def test_parse_activity_rows_rejects_unreconciled_explicit_debit(
+    amount: str,
+    balance: str,
+) -> None:
     with pytest.raises(
         ValueError,
         match=(
@@ -329,12 +333,12 @@ def test_parse_activity_rows_rejects_unreconciled_parenthesized_debit() -> (
     ):
         parse_activity_rows(
             make_statement_text(
-                "\n".join(  # noqa: FLY002
+                "\n".join(
                     (
                         "Account Activity",
                         "Date Description Credits Debits Balance",
                         "02/01/2025 Beginning Balance $1,000.00",
-                        ("02/21/2025 SAMPLE PAYMENT ($200.00) $900.00"),
+                        f"02/21/2025 SAMPLE PAYMENT {amount} ${balance}",
                         "24/7 Account Access | World-Class Service",
                     )
                 )
@@ -386,3 +390,49 @@ def test_parse_activity_rows_legacy_parenthesized_debit() -> None:
     assert (
         rows[0].section is AmericanExpressBusinessCheckingActivitySection.DEBIT
     )
+
+
+def test_parse_activity_rows_continues_across_pages() -> None:
+    text = StatementText(
+        pages=(
+            StatementPage(
+                number=1,
+                text=(
+                    "Account Activity\n"
+                    "Date Description Credits Debits Balance\n"
+                    "08/01/2026 Beginning Balance $100.00\n"
+                    "08/12/2026 SAMPLE DEPOSIT $200.00 $300.00\n"
+                    "ID 000000000000001\n"
+                    "08/12/2026 SAMPLE TRANSFER -$50.00 $250.00\n"
+                    "TRANSFER DETAIL\n"
+                    "Continued on next page\n"
+                    "FOOTNOTE TEXT\n"
+                    "24/7 Account Access\n"
+                ),
+            ),
+            StatementPage(
+                number=2,
+                text=(
+                    "SAMPLE BUSINESS\n"
+                    "Statement Date: 08/31/2026\n"
+                    "Date Description Credits Debits Balance\n"
+                    "08/13/2026 SAMPLE PAYMENT -$25.00 $225.00\n"
+                    "PAYMENT DETAIL\n"
+                    "08/31/2026 Interest Deposit $1.00 $226.00\n"
+                    "08/31/2026 Ending Balance $226.00\n"
+                    "Accounts offered by American Express National Bank.\n"
+                ),
+            ),
+        )
+    )
+    rows = parse_activity_rows(text)
+    assert len(rows) == 4
+    assert rows[1].continuation_lines == ("TRANSFER DETAIL",)
+    assert rows[2].continuation_lines == ("PAYMENT DETAIL",)
+    assert rows[3].balance == Decimal("226.00")
+    assert sum(
+        row.amount
+        if row.section is AmericanExpressBusinessCheckingActivitySection.CREDIT
+        else -row.amount
+        for row in rows
+    ) == Decimal("126.00")

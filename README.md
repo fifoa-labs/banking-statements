@@ -27,7 +27,15 @@ data, unknown statement behavior, and reconciliation failures during
 archive validation are surfaced explicitly rather than silently ignored
 or guessed around.
 
-Version `0.12.0` adds Chime and Wells Fargo Way2Save savings support,
+Version `1.0.0` establishes the stable public parsing API and includes
+Capital One Spark header revisions, signed AMEX checking debits and continued
+activity pages, Chase checking extraction-spacing fixes, and a reversible
+private regression-corpus pruning command. The full local archive was validated
+with 2,436 PDFs; the selected 211-PDF corpus also passed strict smoke validation.
+Selection preserves observed coverage and tracked features, not every possible
+input grammar.
+
+Version `0.12.0` added Chime and Wells Fargo Way2Save savings support,
 including independently reconciled accounts from combined documents.
 Version `0.11.0` added a first-class high-level parsing API while retaining
 the seven supported institutions introduced through `0.10.0`:
@@ -60,7 +68,7 @@ database layer, or Beancount-specific importer.
 -   **Source:** https://github.com/fifoa-labs/banking-statements
 -   **License:** MIT
 
-## Chime support (feature branch; unreleased)
+## Chime support
 
 The Chime processors currently support the statement grammars evidenced by
 checking and Credit Builder samples from 2025 and 2026:
@@ -105,9 +113,8 @@ produces two results. Callers must not assume one PDF equals one account.
 The archive smoke runner validates and prints all account results; a mismatch
 in the secured account fails strict smoke validation even if the card matches.
 
-Validation on this branch covers four supplied PDFs (six account statements).
-The complete 48-PDF Chime archive and the existing private archive must still be
-validated locally before release. No private PDFs or extracted private text
+The complete 48-PDF Chime archive was validated for the 0.12.0 release.
+The 1.0.0 archive validation includes all 2,436 local PDFs. No private PDFs or extracted private text
 are included in the repository.
 
 ## Current Status
@@ -115,7 +122,7 @@ are included in the repository.
 Current release:
 
 ```text
-banking-statements 0.11.0
+banking-statements 1.0.0
 ```
 
 Primary application API:
@@ -295,7 +302,7 @@ LINE_OF_CREDIT
 LOAN
 ```
 
-The complete private statement archive currently validates:
+Historical 0.10.0 full-archive validation:
 
 ```text
 2381 / 2381 PASS
@@ -1939,10 +1946,8 @@ A bank, account family, or statement format is listed as supported only
 after its processor has been implemented and validated against real
 statement evidence.
 
-The complete private development archive currently contains 2381
-supported statements, all of which pass extraction, institution
-detection, processor selection, parsing, normalization, and strict
-reconciliation with zero difference.
+The 1.0.0 private archive validation covered 2,436 PDFs with zero failures.
+The retained 211-PDF corpus also passes strict reconciliation.
 
 ## Private Statement Corpus
 
@@ -2390,9 +2395,9 @@ itself.
 Current milestone:
 
 ```text
-0.11.0
-    high-level public parsing API
-    seven-institution statement support
+1.0.0
+    stable high-level public parsing API
+    eight-institution statement support
 
     Chase
         credit card
@@ -2440,7 +2445,8 @@ Current milestone:
     deterministic processor selection
     running-balance validation where exposed by statement evidence
     100% branch coverage
-    2381 / 2381 private statements PASS
+    2436 / 2436 full-archive PDFs PASS
+    211 / 211 retained PDFs PASS
 ```
 
 Next evidence-driven institution target:
@@ -2491,3 +2497,64 @@ security reports.
 `banking-statements` is released under the MIT License.
 
 See [LICENSE](LICENSE) for details.
+
+## Reducing the private regression archive
+
+Preview a smaller representative corpus without moving any PDFs:
+
+```bash
+make prune-archive folder="private-data/statements"
+```
+
+This development command requires `uv sync --dev`. Every PDF passes through
+`parse_statement()` and every reported account must reconcile. Failed PDFs
+are retained. The command records observed package branch arcs, recognized
+institution signatures, account shape combinations (including empty activity,
+credit/debit directions, negative/zero balances and period boundaries), and
+selected historical input-format variants. A deterministic greedy selection
+preserves their combined feature coverage. It is not a minimum-set guarantee.
+
+The local report defaults to `private-data/prune-manifest.json`. It lists
+retained files, removal candidates, hashes, failures, and the retained files
+covering each candidate. The report contains private paths and may contain
+private parser error text; keep it outside public commits.
+
+**Equal observed coverage is not semantic equivalence.** Coverage cannot prove
+that all input grammars or future regressions are represented. Uninstrumented
+input differences can be lost. Review the manifest and retain independently
+valuable examples before reducing your corpus. The full source archive in the
+consuming application remains valuable for broader release validation.
+
+Pin an independently valuable example during preview with repeatable `--keep`
+paths relative to the archive root:
+
+```bash
+uv run python -m scripts.prune_archive private-data/statements \
+  --keep "chase/checking/example.pdf"
+```
+
+After reviewing the preview, explicitly acknowledge this limitation and move
+candidates to a new directory outside the active archive:
+
+```bash
+make prune-archive apply=1 accept=1 \
+  destination="private-data/pruned-statements"
+```
+
+Apply rejects stale parser code, changed file bytes, changed archive inventory,
+modified selections, symlinks, existing destinations, and destinations inside
+the active archive. It revalidates the retained PDFs and their coverage before
+moving candidates, preserving relative paths and a copy of the manifest. A move
+failure rolls back completed moves. Files are never permanently deleted by this
+command. Use a fresh preview after any changes.
+
+Validate the reduced archive afterward:
+
+```bash
+make smoke-archive folder="private-data/statements"
+```
+
+To restore, move the PDFs from the destination back to their original relative
+paths beneath the manifest's `root`. Keep the manifest until restoration is
+complete. Re-preview after adding new evidence or changing parsers; do not reuse
+an old manifest.

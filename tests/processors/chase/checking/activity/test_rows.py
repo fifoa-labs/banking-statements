@@ -29,12 +29,15 @@ def make_statement_text(text: str) -> StatementText:
     )
 
 
-def test_parse_activity_rows() -> None:
+@pytest.mark.parametrize(
+    "section", ["transactiondetail", "transaction detail"]
+)
+def test_parse_activity_rows(section: str) -> None:
     rows = parse_activity_rows(
         make_statement_text(
-            "\n".join(  # noqa: FLY002
+            "\n".join(
                 (
-                    "*start*transactiondetail",
+                    f"*start*{section}",
                     "TRANSACTION DETAIL",
                     "DATE DESCRIPTION AMOUNT BALANCE",
                     "",
@@ -42,7 +45,7 @@ def test_parse_activity_rows() -> None:
                     "01/05 SAMPLE DEPOSIT 200.00 1,200.00",
                     "01/10 SAMPLE PAYMENT -50.00 1,150.00",
                     "Ending Balance $1,150.00",
-                    "*end*transactiondetail",
+                    f"*end*{section}",
                 )
             )
         )

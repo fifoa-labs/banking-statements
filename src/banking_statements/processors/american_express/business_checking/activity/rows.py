@@ -51,6 +51,7 @@ _ENDING_ROW_PATTERN = re.compile(
 _ROW_PATTERN = re.compile(
     r"^(?P<date>\d{2}/\d{2}/\d{4})\s+"
     r"(?P<description>.+?)\s+"
+    r"(?P<minus_debit>-)?"
     r"(?P<debit_open>\()?"
     r"\$?"
     r"(?P<legacy_debit_open>\()?"
@@ -64,10 +65,11 @@ _DATE_PREFIX_PATTERN = re.compile(
 )
 
 _SECTION_PATTERN = re.compile(
-    r"Account Activity\s+"
+    r"(?:Account Activity\s+)?"
     r"Date Description Credits Debits Balance\s+"
     r"(?P<body>.*?)"
-    r"(?:24/7 Account Access|\Z)",
+    r"(?:Continued on next page|24/7 Account Access|"
+    r"Accounts offered by American Express National Bank|\Z)",
     re.DOTALL,
 )
 
@@ -83,15 +85,20 @@ def parse_activity_rows(  # noqa: C901, PLR0912
     text: StatementText,
 ) -> tuple[AmericanExpressBusinessCheckingActivityRow, ...]:
     """Parse American Express business-checking account activity."""
-    section_match = _SECTION_PATTERN.search(text.text)
+    section_matches = tuple(_SECTION_PATTERN.finditer(text.text))
 
-    if section_match is None:
+    if not section_matches:
         return ()
 
     rows: list[AmericanExpressBusinessCheckingActivityRow] = []
     running_balance: Decimal | None = None
 
-    for raw_line in section_match.group("body").splitlines():
+    activity_lines = (
+        line
+        for section_match in section_matches
+        for line in section_match.group("body").splitlines()
+    )
+    for raw_line in activity_lines:
         line = raw_line.strip()
 
         if not line:
@@ -151,7 +158,10 @@ def parse_activity_rows(  # noqa: C901, PLR0912
             or row_match.group("legacy_debit_open") is not None
         ) and row_match.group("debit_close") is not None
 
-        if is_parenthesized_debit:
+        if (
+            is_parenthesized_debit
+            or row_match.group("minus_debit") is not None
+        ):
             if balance != running_balance - amount:
                 msg = (
                     "American Express business-checking debit row does not "
