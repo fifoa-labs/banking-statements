@@ -42,6 +42,7 @@ def test_parse_legacy_spark_identity() -> None:
     "title",
     [
         "Spark Cash credit card | Visa Signature Business ending in 5678",
+        "Spark Cash card | Visa Signature Business ending in 5678",
         "Venture X Business card | Visa Infinite Business ending in 5678",
     ],
 )

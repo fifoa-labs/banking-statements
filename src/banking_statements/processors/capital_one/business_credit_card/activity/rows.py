@@ -88,8 +88,9 @@ _CURRENT_CONTINUATION_PATTERNS = (
 )
 
 _LEGACY_TITLE_MARKER = "Spark® Visa Signature Business Account Ending in"
-_SPARK_CURRENT_TITLE_MARKER = (
-    "Spark Cash credit card | Visa Signature Business ending in"
+_SPARK_CURRENT_TITLE_MARKERS = (
+    "Spark Cash credit card | Visa Signature Business ending in",
+    "Spark Cash card | Visa Signature Business ending in",
 )
 _VENTURE_X_BUSINESS_TITLE_MARKER = (
     "Venture X Business card | Visa Infinite Business ending in"
@@ -433,8 +434,8 @@ def _parse_interest_row(
     text: str,
 ) -> CapitalOneBusinessCreditCardActivityRow | None:
     """Parse the statement-period interest total when the product reports it."""  # noqa: E501
-    is_spark = (
-        _LEGACY_TITLE_MARKER in text or _SPARK_CURRENT_TITLE_MARKER in text
+    is_spark = _LEGACY_TITLE_MARKER in text or any(
+        marker in text for marker in _SPARK_CURRENT_TITLE_MARKERS
     )
     reported_total = _unique_reported_total(
         text,
@@ -466,7 +467,7 @@ def parse_activity_rows(
     if _LEGACY_TITLE_MARKER in full_text:
         transaction_rows = _parse_legacy_transaction_rows(full_text)
     elif (
-        _SPARK_CURRENT_TITLE_MARKER in full_text
+        any(marker in full_text for marker in _SPARK_CURRENT_TITLE_MARKERS)
         or _VENTURE_X_BUSINESS_TITLE_MARKER in full_text
     ):
         transaction_rows = _parse_current_transaction_rows(full_text)

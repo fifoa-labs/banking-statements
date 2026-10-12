@@ -36,7 +36,7 @@ _TITLE_ACCOUNT_PATTERNS = (
         re.IGNORECASE,
     ),
     re.compile(
-        r"Spark Cash credit card \| Visa Signature Business ending in\s*"
+        r"Spark Cash (?:credit )?card \| Visa Signature Business ending in\s*"
         r"(?P<last4>\d{4})\b",
         re.IGNORECASE,
     ),

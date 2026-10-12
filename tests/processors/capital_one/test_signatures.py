@@ -32,9 +32,9 @@ def test_capital_one_credit_card_signature_is_stable() -> None:
 
 
 def test_capital_one_business_credit_card_signatures_are_stable() -> None:
-    assert len(CAPITAL_ONE_BUSINESS_CREDIT_CARD_SIGNATURES) == 3
+    assert len(CAPITAL_ONE_BUSINESS_CREDIT_CARD_SIGNATURES) == 4
 
-    legacy_spark, current_spark, venture_x_business = (
+    legacy_spark, current_spark, revised_spark, venture_x_business = (
         CAPITAL_ONE_BUSINESS_CREDIT_CARD_SIGNATURES
     )
 
@@ -55,6 +55,11 @@ def test_capital_one_business_credit_card_signatures_are_stable() -> None:
         "Trans Date Post Date Description Amount",
         "Fees",
         "Capital One",
+    )
+
+    assert revised_spark.required_markers == (
+        "Spark Cash card | Visa Signature Business ending in",
+        *current_spark.required_markers[1:],
     )
 
     assert venture_x_business.required_markers == (
